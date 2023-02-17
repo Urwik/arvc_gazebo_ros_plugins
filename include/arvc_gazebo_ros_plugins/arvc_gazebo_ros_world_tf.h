@@ -38,7 +38,7 @@ namespace gazebo
     // Pointer to the model
     private:  physics::ModelPtr model;
               ignition::math::Pose3d world_pose;
-              ros::NodeHandle* nh_;
+              std::unique_ptr<ros::NodeHandle> nh_;
               ros::Publisher pub_;
               boost::shared_ptr<tf2_ros::TransformBroadcaster> br2;
               tf::Transform tf;
