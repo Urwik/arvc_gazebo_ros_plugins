@@ -9,6 +9,8 @@
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/Plugin.hh>
 #include <ignition/math/Vector3.hh>
+#include <ignition/math/Pose3.hh>
+
 
 // ROS
 #include <ros/ros.h>
@@ -67,6 +69,14 @@ namespace gazebo
     /// @brief Saves an image of the enviroment
     private: void TakeScreenShot();
 
+    /// @brief Gets transform between camera and sensor
+    private: ignition::math::Pose3d GetCameraSensorTF();
+
+    /// @brief Gets transform between camera and sensor
+    private: void SaveCameraSensorTF();
+
+        /// @brief Gets transform between camera and sensor
+    private: void SaveCameraParams();
 
     /**
      * @brief Gets a pointer to an sdf file from a path
@@ -268,7 +278,9 @@ namespace gazebo
     private: physics::ModelPtr model;
     private: physics::ModelPtr sensor_model;
     private: event::ConnectionPtr updateConnection;
+    private: physics::ModelPtr camera_model;
     private: sensors::CameraSensorPtr camera;
+    private: ignition::math::Pose3d camera_pose;
     private: std::string cam_name;
     
 

@@ -59,6 +59,8 @@ namespace gazebo
 {
 class MoveModel : public WorldPlugin
 {
+
+////////////////////////////////////////////////////////////////////////////////
   public: MoveModel(){
     ROS_INFO(RED "CONSTRUCTOR" RESET);
     this->pcl_cloud.reset(new PointCloud);
@@ -66,11 +68,13 @@ class MoveModel : public WorldPlugin
     this->handle_to_model = false;
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   public: void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf)
   {
     this->world = _parent;
-
     this->world->SetPhysicsEnabled(false);
+
 
     this->ParseArgs(_sdf);
 
@@ -85,15 +89,25 @@ class MoveModel : public WorldPlugin
     ROS_INFO(GREEN "ARVC GAZEBO MoveModel PLUGIN LOADED" RESET);
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   /**
    * @brief Se ejecuta una única vez inmediatamente tras la función Load()
    */
   public: void Init()
   { 
+    this->truss_structue = this->world->ModelByName("reticular_structure");
+
+    physics::Link_V links = this->truss_structue->GetLinks();
+    for(physics::LinkPtr link : links)
+      this->links_bbx.push_back(link->CollisionBoundingBox());
+
     this->updateConnection =  event::Events::ConnectWorldUpdateBegin(
                               std::bind(&MoveModel::OnUpdate, this));
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   /**
    * @brief Hilo que se ejecuta cada vez que se avanza un paso en la simulación
    */
@@ -118,6 +132,8 @@ class MoveModel : public WorldPlugin
     }
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: void GenerateDataset()
   {
     int estado = 0;
@@ -164,6 +180,8 @@ class MoveModel : public WorldPlugin
 
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   public: void ParseArgs(sdf::ElementPtr sdf)
   {
     std::cout << BLUE << "PARSING ARGUMENTS... " << RESET << std::endl;
@@ -173,14 +191,15 @@ class MoveModel : public WorldPlugin
       this->output_dir = "/media/arvc/data/datasets/ARVC_GZF";
     } else {
       this->output_dir = sdf->GetElement("out_dir")->Get<std::string>();
-      std::cout << BLUE << "OUTPUT DIR: " << RESET << '\n' << this->output_dir.c_str() << std::endl;
     }
+    std::cout << BLUE << "OUTPUT DIR: " << RESET << '\n' << this->output_dir.c_str() << std::endl;
 
     if (!sdf->HasElement("num_env")) {
       this->num_env = 100;
     } else {
       this->num_env = sdf->GetElement("num_env")->Get<int>();
     }
+    std::cout << BLUE << "NUM_ENV: " << RESET << '\n' << this->num_env << std::endl;
 
     if (!sdf->HasElement("positive_dist")) {
       this->pos_dist = ignition::math::Vector3d(10.0, 10.0, 5.0);
@@ -199,20 +218,28 @@ class MoveModel : public WorldPlugin
     } else {
       this->pc_binary = sdf->GetElement("pc_binary")->Get<bool>();
     }
+    std::cout << BLUE << "BINARY CLOUD: " << RESET << '\n' << this->pc_binary << std::endl;
+
 
     if (!sdf->HasElement("rand_mode")) {
       this->randMode = "uniform";
     } else {
       this->randMode = sdf->GetElement("rand_mode")->Get<std::string>();
     }
+    std::cout << BLUE << "RAND_MODE: " << RESET << '\n' << this->randMode << std::endl;
+
 
     if (!sdf->HasElement("arvc_debug")) {
       this->arvc_debug = false;
     } else {
       this->arvc_debug = sdf->GetElement("arvc_debug")->Get<bool>();
     }
+    std::cout << BLUE << "DEBUG: " << RESET << '\n' << this->num_env << std::endl;
+
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: bool GetCamera()
   {
     this->camera_sensor = sensors::get_sensor("arvc_cam");
@@ -226,12 +253,16 @@ class MoveModel : public WorldPlugin
     }
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: void InsertCamera()
   {
     sdf::SDFPtr camera_sdf = this->GetSDFfile("/home/arvc/workSpaces/arvc_ws/src/arvc_dataset_generator/models/camera_test/model.sdf");
     this->world->InsertModelSDF(*camera_sdf);
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: void TakeScreenShot()
   {
     // ROS_INFO_COND(this->arvc_debug, "TAKING SCREENSHOT");
@@ -243,6 +274,8 @@ class MoveModel : public WorldPlugin
 
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   /**
    * @brief Get a pointer to an SDF file.
    * @param sdfPath Absolute path to the model file.
@@ -258,6 +291,8 @@ class MoveModel : public WorldPlugin
     return sdf_File;
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: bool CheckOusterReady()
   {
     ROS_INFO_COND(this->arvc_debug, "CHECKING IF OUSTER IS READY");
@@ -270,6 +305,8 @@ class MoveModel : public WorldPlugin
     }
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: void MoveTargetModel()
   {
     ROS_INFO_COND(this->arvc_debug, YELLOW "MOVING MODEL..." RESET);
@@ -281,6 +318,7 @@ class MoveModel : public WorldPlugin
   }
 
 
+////////////////////////////////////////////////////////////////////////////////
   private: void SetupROS()
   {
     //ROS
@@ -303,6 +341,8 @@ class MoveModel : public WorldPlugin
     this->callback_queue_thread = boost::thread(boost::bind(&MoveModel::QueueThread, this));
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: void SavePointCloud(PointCloud::Ptr cloud)
   {
     // ROS_INFO_COND(this->arvc_debug, "SAVING POINTCLOUD...");
@@ -323,6 +363,8 @@ class MoveModel : public WorldPlugin
       writer.write<PointT>(ss.str(), *cloud, this->pc_binary);
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: void CheckOutputDirs()
   {
     this->pcd_dir = this->output_dir / "pcd";
@@ -342,6 +384,8 @@ class MoveModel : public WorldPlugin
     
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   private: void PointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& input)
   {
     pcl::PCLPointCloud2 pcl_pc2;
@@ -353,35 +397,8 @@ class MoveModel : public WorldPlugin
     *pcl_cloud = *temp_cloud;
   }
 
-  /**
-   * @brief Set random pose to a model.
-   * @param modelElement sdf::ElementPtr to the model element.
-   */
-  private: void SetModelPose(sdf::ElementPtr modelElement)
-  {
-    sdf::ElementPtr poseElement = modelElement->GetElement("pose");
-    ignition::math::Pose3d pose = this->ComputeRandomPose();
-    std::string pose_str = this->Pose2string(pose);
-    
-    poseElement->Set<ignition::math::Pose3d>(pose);
-  }
 
-  /**
-   * @brief Set random pose to a model.
-   * @param modelElement sdf::ElementPtr to the model element.
-   */
-  private: void SetModelPosition(sdf::ElementPtr modelElement)
-  {
-    using namespace ignition::math;
-    sdf::ElementPtr poseElement = modelElement->GetElement("pose");
-    Pose3d orig_pose = poseElement->Get<Pose3d>();
-    Pose3d new_pose_;
-    Vector3d position = this->ComputeEnvRandPosition();
-    new_pose_.Set(position, Vector3d(0.0,0.0,0.0));
-    
-    poseElement->Set<Pose3d>(new_pose_);
-  }
-
+////////////////////////////////////////////////////////////////////////////////
   /**
    * @brief Compute random pose X Y Z R P Y
    * @return Return the random pose
@@ -393,142 +410,55 @@ class MoveModel : public WorldPlugin
     Vector3d position;
     Vector3d rotation;
 
-    rotation.X() = Rand::DblUniform(0, 2*M_PI);
-    rotation.Y() = Rand::DblUniform(0, 2*M_PI);
-    rotation.Z() = Rand::DblUniform(0, 2*M_PI);
+    do{
+      rotation.X() = Rand::DblUniform(0, 2*M_PI);
+      rotation.Y() = Rand::DblUniform(0, 2*M_PI);
+      rotation.Z() = Rand::DblUniform(0, 2*M_PI);
 
-    if (this->randMode == "uniform")
-    {
-      position.X() = Rand::DblUniform(this->neg_dist.X(), this->pos_dist.X()); 
-      position.Y() = Rand::DblUniform(this->neg_dist.Y(), this->pos_dist.Y()); 
-      position.Z() = Rand::DblUniform(this->neg_dist.Z(), this->pos_dist.Z()); 
-    }
-    else if (this->randMode == "normal")
-    {
-      position.X() = Rand::DblNormal(0,this->pos_dist.X()); 
-      position.Y() = Rand::DblNormal(0,this->pos_dist.Y()); 
-      position.Z() = Rand::DblNormal(0,this->pos_dist.Z()); 
-    }
-    else
-      ROS_ERROR("WRONG randMode, POSSIBLE OPTIONS ARE: uniform, normal");
+      if (this->randMode == "uniform")
+      {
+        position.X() = Rand::DblUniform(this->neg_dist.X(), this->pos_dist.X()); 
+        position.Y() = Rand::DblUniform(this->neg_dist.Y(), this->pos_dist.Y()); 
+        position.Z() = Rand::DblUniform(this->neg_dist.Z(), this->pos_dist.Z()); 
+      }
+      else if (this->randMode == "normal")
+      {
+        position.X() = Rand::DblNormal(0,this->pos_dist.X()); 
+        position.Y() = Rand::DblNormal(0,this->pos_dist.Y()); 
+        position.Z() = Rand::DblNormal(0,this->pos_dist.Z()); 
+      }
+      else
+        ROS_ERROR("WRONG randMode, POSSIBLE OPTIONS ARE: uniform, normal");
 
-    // position = this->ApplyOffset(position);
-    pose.Set(position, rotation);
-
+      pose.Set(position, rotation);
+    }while (!this->ValidPose(pose));
+    
     return pose;
   }
 
+
+////////////////////////////////////////////////////////////////////////////////
   /**
-   * @brief Compute random pose X Y Z R P Y
-   * @return Return the random pose
+   * @brief Check that pose dont lies inside truss structure
+   * @return Return true if pose is valid
    */
-  private: ignition::math::Pose3d ComputeWorldRandomPose()
+  private: bool ValidPose(ignition::math::Pose3d pose)
   {
     using namespace ignition::math;
-    Pose3d pose;
-    Vector3d position;
-    Vector3d rotation;
 
-    rotation.X() = 0;
-    rotation.Y() = 0;
-    rotation.Z() = Rand::DblUniform(0, 2*M_PI);
+    Vector3d position = pose.Pos();
 
-    if (this->randMode == "uniform")
+    for (AxisAlignedBox bbx : this->links_bbx)
     {
-      position.X() = Rand::DblUniform(-2, 2); 
-      position.Y() = Rand::DblUniform(-2, 2); 
-      position.Z() = Rand::DblUniform(-0.5, 0.5); 
-    }
-    else if (this->randMode == "normal")
-    {
-      position.X() = Rand::DblNormal(0, 1); 
-      position.Y() = Rand::DblNormal(0, 1); 
-      position.Z() = Rand::DblNormal(0, 0.5); 
-    }
-    else
-      ROS_ERROR("WRONG randMode, POSSIBLE OPTIONS ARE: uniform, normal");
-
-    pose.Set(position, rotation);
-
-    return pose;
-  }
-
-  /**
-   * @brief Compute random pose X Y Z
-   */
-  private: ignition::math::Vector3d ComputeEnvRandPosition()
-  {
-    using namespace ignition::math;
-    Vector3d position;
-    Vector3d offset_(10, 10, 0);
-
-    if (this->randMode == "uniform")
-    {
-      position.X() = Rand::DblUniform(-30, 30);
-      position.Y() = Rand::DblUniform(-30, 30);
-      position.Z() = Rand::DblUniform(0, 0.5);
-    }
-    else if (this->randMode == "normal")
-    {
-      position.X() = Rand::DblNormal(0, 15); 
-      position.Y() = Rand::DblNormal(0, 15);
-      position.Z() = Rand::DblNormal(0, 0.25);
-    }
-
-    return this->ApplyOffset(position, offset_);
-  }
-
-
-  /**
-   * @brief Apply offset to the passed coordinate.
-   * 
-   */
-  private: ignition::math::Vector3d ApplyOffset(ignition::math::Vector3d input)
-  {
-    ignition::math::Vector3d output;
-
-    for (size_t i = 0; i < 3; i++)
-    {
-      if(input[i] < 0)
-        output[i] = input[i] + this->neg_offset[i];
-      else
-        output[i] = input[i] + this->pos_offset[i];
+      if(bbx.Contains(position))
+        return false;
     }
     
-    return output;
-  }
-
-  private: ignition::math::Vector3d ApplyOffset(ignition::math::Vector3d input, ignition::math::Vector3d offset_)
-  {
-    ignition::math::Vector3d output;
-
-    for (size_t i = 0; i < 3; i++)
-    {
-      if(input[i] < 0)
-        output[i] = input[i] - offset_[i];
-      else
-        output[i] = input[i] + offset_[i];
-    }
-    
-    return output;
-  }
-
-  /**
-   * @brief Transforms ignition::math::Pose3d to a string
-   * @param pose ignition::math::Pose3d Pose (X,Y,Z,R,P,Y) in double
-   * @return
-   */
-  private: std::string Pose2string(ignition::math::Pose3d pose)
-  {
-    std::stringstream ss;
-    ss.str("");
-    ss << pose.X()    << " " << pose.Y()     << " " << pose.Z() << " "
-       << pose.Roll() << " " << pose.Pitch() << " " << pose.Yaw();
-
-    return ss.str();
+    return true;
   }
 
 
+////////////////////////////////////////////////////////////////////////////////
   private: void QueueThread()
   {
     static const double timeout = 0.01;
@@ -593,6 +523,9 @@ class MoveModel : public WorldPlugin
     std::string world_name;
     bool arvc_debug = false;
     bool pc_binary = true;
+    physics::ModelPtr truss_structue;
+    std::vector<ignition::math::AxisAlignedBox> links_bbx;
+
 
 
 };

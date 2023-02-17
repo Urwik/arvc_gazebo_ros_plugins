@@ -3,6 +3,7 @@
 
 // C++
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <math.h>
 
@@ -23,6 +24,10 @@
 // PCL
 #include <pcl/io/pcd_io.h>
 #include <pcl/PCLPointCloud2.h>
+#include <pcl/visualization/pcl_visualizer.h>
+
+//Eigen
+#include <Eigen/Dense>
 
 namespace fs = std::filesystem;
 using namespace std;
@@ -65,7 +70,8 @@ namespace gazebo
     this->laser_retro = 1;
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf)
   {
     this->world = _parent;
@@ -87,12 +93,14 @@ namespace gazebo
     ROS_INFO(GREEN "ARVC GAZEBO SPAWNMODEL PLUGIN LOADED" RESET);
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::Init()
   { 
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::OnUpdate()
   { 
     if(!this->handle_to_cam)
@@ -104,7 +112,7 @@ namespace gazebo
 
 
   // MAIN FUNCTION
-  /////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::GenerateDataset()
   {
     std::vector<std::string> env_models_;
@@ -158,8 +166,10 @@ namespace gazebo
         break;
       
       case 5:
-          this->env_count++;
-          estado = 1;
+          // this->env_count++;
+          // estado = 1;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
         break;
 
       default:
@@ -343,6 +353,7 @@ namespace gazebo
     sdf::ElementPtr root = camera_sdf->Root();
     sdf::ElementPtr model = root->GetElement("model");
     sdf::ElementPtr link = model->GetElement("link");
+    this->camera_pose = link->GetElement("pose")->Get<ignition::math::Pose3d>();
     sdf::ElementPtr sensor = link->GetElement("sensor");
 
     this->cam_name = sensor->GetAttribute("name")->GetAsString();
@@ -360,6 +371,8 @@ namespace gazebo
     {
       ROS_INFO(BLUE "HANDLE TO CAM OBTAINED CORRECTLY" RESET);
       this->camera = std::dynamic_pointer_cast<sensors::CameraSensor>(sensor);
+      this->camera_model = this->world->ModelByName("camera");
+
       return true;
     }
   }
@@ -375,7 +388,13 @@ namespace gazebo
     
     this->camera->SaveFrame(ss.str().c_str());
   }
-
+  
+  /////////////////////////////////
+  ignition::math::Pose3d DatasetGenerator::GetCameraSensorTF()
+  {
+    ignition::math::Pose3d sensor_pose = this->sensor_model->WorldPose();
+    return (this->camera_pose - sensor_pose);
+  }
 
   // GENERATION FUNCTIONS
   /////////////////////////////////
@@ -782,11 +801,50 @@ namespace gazebo
         this->pcl_cloud->width = cloud_size;
         this->pcl_cloud->height = 1;
       }
-    
+      // this->SaveCameraSensorTF();
+      // this->SaveCameraParams();
       writer.write<PointT>(ss.str(), *this->pcl_cloud, this->pc_binary);
     }
   }
 
+  /////////////////////////////////
+  void DatasetGenerator::SaveCameraSensorTF()
+  {
+    pcl::visualization::PCLVisualizer vis;
+    vis.initCameraParameters();
+    ignition::math::Pose3d pose = this->GetCameraSensorTF();
+    ignition::math::Vector3d upVector;
+
+    vis.setCameraPosition(this->camera_pose.X(), this->camera_pose.Y(), this->camera_pose.Z(), pose.X(), pose.Y(), pose.Z(), pose.Roll(), pose.Pitch(), pose.Yaw());
+
+    std::stringstream ss;
+    ss.str("");
+    ss << this->pcd_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".cam";
+
+    vis.saveCameraParameters(ss.str());
+    vis.close();
+  }
+
+    /////////////////////////////////
+  void DatasetGenerator::SaveCameraParams()
+  {
+    ignition::math::Pose3d sensor_pose = this->sensor_model->WorldPose();
+
+    Eigen::VectorXd sensor_world_pose(6);
+    const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", "\n");
+
+    std::stringstream ss;
+    ss.str("");
+    ss << this->pcd_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".pose";
+
+    std::ofstream file(ss.str());
+    if(file.is_open())
+    {
+      file << sensor_world_pose.format(CSVFormat);
+      file.close();
+    }
+
+  }
 
   // HELPER FUNCTIONS CALCULATIONS
   /////////////////////////////////
