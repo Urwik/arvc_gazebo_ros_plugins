@@ -66,36 +66,97 @@ class CollisionDetector : public WorldPlugin
   public: void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf)
   {
     this->world = _parent;
-    this->models = this->world->Models();
+
+    this->insertModels();
+
+    boost::thread generator_thread(boost::bind(&CollisionDetector::checkCollisions, this));
 
     // std::thread chech_collision_thread(std::bind(&CollisionDetector::checkCollisions, this));
   }
 
   public: void Init()
   {
-    this->checkCollisions();
   }
 
+
   //////////////////////////////////////////////////////////////////////////////
+  private: void insertModels()
+  {
+    using namespace ignition::math;
+
+
+    fs::path model_path_1 = "/home/arvc/workSpaces/arvc_ws/src/arvc_dataset_generator/models/unit_box_1/model.sdf";
+    sdf::SDFPtr sdf_ptr_1 = this->GetSdfPtr(model_path_1);
+    sdf::ElementPtr model_element_ptr_1 = this->GetModelElementPtr(sdf_ptr_1);
+
+    fs::path model_path_2 = "/home/arvc/workSpaces/arvc_ws/src/arvc_dataset_generator/models/unit_box_2/model.sdf";
+    sdf::SDFPtr sdf_ptr_2 = this->GetSdfPtr(model_path_2);
+    sdf::ElementPtr model_element_ptr_2 = this->GetModelElementPtr(sdf_ptr_2);
+
+    Pose3d pose_1(0, 0, 0.5, 0, 0, 0);
+    Pose3d pose_2(0, 0, 2, 0, 0, 0);
+
+    this->SetModelPose(model_element_ptr_1, pose_1);
+    this->world->InsertModelSDF(*sdf_ptr_1);
+
+    this->SetModelPose(model_element_ptr_2, pose_2);
+    this->world->InsertModelSDF(*sdf_ptr_2);
+  }
+
   private: void checkCollisions()
   {
-    namespace im = ignition::math;
+    using namespace ignition::math;
 
-    std::vector<im::AxisAlignedBox> models_bbx;
-
-    for (size_t i = 0; i < this->models.size(); i++)
-      models_bbx.push_back(this->models[i]->CollisionBoundingBox());
+    while(true){
 
 
-    im::Vector3d inlier(0,0,0.5);
-    im::Vector3d outlier(0,0,10);
+        physics::ModelPtr model_1 = this->world->ModelByName("unit_box_1");
+        physics::ModelPtr model_2 = this->world->ModelByName("unit_box_2");
 
+        if(model_1)
+        {
+          if(model_2)
+          {
+            AxisAlignedBox bbx_1 = model_1->CollisionBoundingBox();
+            AxisAlignedBox bbx_2 = model_2->CollisionBoundingBox();
 
-    for (im::AxisAlignedBox bbx : models_bbx)
-    {
-      std::cout << "Contains Inlier: " << bbx.Contains(inlier) << std::endl;
-      std::cout << "Contains Outlier: " << bbx.Contains(outlier) << std::endl;
+            if(bbx_1.Intersects(bbx_2))
+              std::cout << "Objects are in collision" << std::endl;
+            else
+              std::cout << "Objects are not in collision" << std::endl;
+          }
+        }
+      
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+}
+
+  //////////////////////////////////////////////////////////////////////////////
+  private: sdf::SDFPtr GetSdfPtr(fs::path path) 
+  {
+    sdf::SDFPtr sdf_file_ptr (new sdf::SDF());
+    sdf::init(sdf_file_ptr);
+    sdf::readFile(path, sdf_file_ptr);
+
+    return sdf_file_ptr;
+  }
+
+
+  private: sdf::ElementPtr GetModelElementPtr(sdf::SDFPtr sdfPtr)
+  {
+    sdf::ElementPtr modelElement = sdfPtr->Root()->GetElement("model");
+
+    return modelElement;
+  }
+
+
+  /////////////////////////////////
+  private: void SetModelPose(sdf::ElementPtr modelElement, ignition::math::Pose3d pose)
+  {
+    using namespace ignition::math;
+
+    sdf::ElementPtr poseElement = modelElement->GetElement("pose");
+    poseElement->Set<Pose3d>(pose);
   }
 
 

@@ -117,6 +117,7 @@ namespace gazebo
   {
     std::vector<std::string> env_models_;
     std::vector<std::string> models_;
+    std::vector<std::string> rmvd_models; 
     int estado = 0;
     int env_count_ = 0;
 
@@ -124,56 +125,67 @@ namespace gazebo
     {
       switch (estado)
       {
-      
-      case 0:
-        if(this->SensorReady()){
-          this->ResumeEnvCount();
-          ROS_INFO(GREEN "STARTING TO SPAWN MODELS..." RESET);
-          std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-          estado = 1;
-        }
-        break;
+        
+        case 0:
+          if(this->SensorReady()){
+            this->ResumeEnvCount();
+            ROS_INFO(GREEN "STARTING TO SPAWN MODELS..." RESET);
+            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+            estado = 1;
+          }
+          break;
 
-      case 1:
-        ROS_INFO(YELLOW "GENERATING RANDOM ENVIROMENT: %d" RESET, this->env_count);
-        this->MoveGroundModel();
-        env_models_ = this->SpawnRandomEnviroment();
-        models_ = this->SpawnRandomModels();
-        this->ApplyRotation(this->sensor_model, this->ComputeRandRotation());
-        estado = 2;
-        break;
-      
-      case 2:
-        if (this->CheckSpawnedModels(models_) && this->CheckSpawnedModels(env_models_))
-        {
+        case 1:
+          ROS_INFO(YELLOW "GENERATING RANDOM ENVIROMENT: %d" RESET, this->env_count);
+          this->MoveGroundModel();
+          env_models_ = this->SpawnRandomEnviroment();
+          models_ = this->SpawnRandomModels();
+          this->ApplyRotation(this->sensor_model, this->ComputeRandRotation());
+          estado = 2;
+          break;
+        
+        case 2:
+          ROS_INFO_COND(this->debug_msgs, YELLOW "CALLING REMOVE COLLIDE MODELS" RESET);
+
+          rmvd_models = this->RemoveCollideModels(this->sensor_model);
+
+          for (size_t i = 0; i < models_.size(); i++)
+            std::cout << rmvd_models[i] << std::endl;
+
+          ROS_INFO_COND(this->debug_msgs, GREEN "PASSED REMOVE COLLIDE MODELS" RESET);
           estado = 3;
-        }
-        break;
-      
-      case 3:
-        this->TakeScreenShot();
-        this->SavePointCloud();
-        this->removeModels();
-        estado = 4;
-        break;
-      
-      case 4:
-        if(this->CheckDeletedModels(models_) && this->CheckDeletedModels(env_models_))
-        {
-          this->env_count++;
-          estado = 1;
-        }
-        break;
-      
-      case 5:
+          break;
+
+        case 3:
+          if (this->CheckSpawnedModels(models_) && this->CheckSpawnedModels(env_models_))
+          {
+            estado = 4;
+          }
+          break;
+        
+        case 4:
+          this->TakeScreenShot();
+          this->SavePointCloud();
+          this->removeModels();
+          estado = 5;
+          break;
+        
+        case 5:
+          if(this->CheckDeletedModels(models_) && this->CheckDeletedModels(env_models_))
+          {
+            this->env_count++;
+            estado = 1;
+          }
+          break;
+        
+        case 6:
           // this->env_count++;
           // estado = 1;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          break;
 
-        break;
-
-      default:
-        break;
+        default:
+          break;
       }
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -181,7 +193,6 @@ namespace gazebo
     ROS_INFO(GREEN "ENVS CREATED CORRECTLY" RESET);
 
   }
-
 
   // CONFIGURATION AND PARSING ARGUMENTS
   /////////////////////////////////
@@ -328,6 +339,21 @@ namespace gazebo
       this->debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
     }
       std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
+
+    // 
+    if (!sdf->HasElement("sensor_offset")) {
+      this->sensor_offset = this->config["plugin"]["sensor_offset"].as<float>();
+    } else {
+      this->sensor_offset = sdf->GetElement("sensor_offset")->Get<float>();
+    }
+
+    // 
+    if (!sdf->HasElement("rotation_range")) {
+      this->rot_range = this->config["plugin"]["rotation_range"].as<ignition::math::Vector3d>();
+    } else {
+      this->rot_range = sdf->GetElement("rotation_range")->Get<ignition::math::Vector3d>();
+    }
+      std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
   }
 
   /////////////////////////////////
@@ -396,6 +422,7 @@ namespace gazebo
     return (this->camera_pose - sensor_pose);
   }
 
+
   // GENERATION FUNCTIONS
   /////////////////////////////////
   sdf::SDFPtr DatasetGenerator::GetSDFfile(fs::path sdfPath)
@@ -452,11 +479,11 @@ namespace gazebo
         sdf::ElementPtr modelElement = temp_sdfFile->Root()->GetElement("model");
 
         model_name = this->SetModelName(modelElement, i);
-        models.push_back(model_name);
-
-        this->SetModelPose(modelElement);
-        this->SetLaserRetro(modelElement);
         this->SetRandomScale(modelElement);
+        this->SetLaserRetro(modelElement);
+        this->SetModelPose(modelElement);
+
+        models.push_back(model_name);
 
         ROS_INFO_COND(this->debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
         this->world->InsertModelSDF(*temp_sdfFile);
@@ -555,8 +582,14 @@ namespace gazebo
   void DatasetGenerator::SetModelPose(sdf::ElementPtr modelElement)
   {
     sdf::ElementPtr pose_element = modelElement->GetElement("pose");
-    ignition::math::Pose3d pose = this->ComputeRandomPose();
+    ignition::math::Pose3d pose;
     
+    do
+    {
+      pose = this->ComputeRandomPose();
+    } while (!this->ReachPositionOffset(pose));
+    
+
     pose_element->Set<ignition::math::Pose3d>(pose);
   }
 
@@ -599,6 +632,11 @@ namespace gazebo
 
       visualElement = visualElement->GetNextElement("visual");
     }
+
+    // Set Scale to Collision element 
+    sdf::ElementPtr collisionElement = linkElement->GetElement("collision");
+    sdf::ElementPtr sizeElement = collisionElement->GetElement("geometry")->GetElement("box")->GetElement("size");
+    sizeElement->Set<Vector3d>(scale);
   }
   
   /////////////////////////////////
@@ -770,6 +808,31 @@ namespace gazebo
     return true;
   }
 
+  /////////////////////////////////
+  std::vector<std::string> DatasetGenerator::RemoveCollideModels(physics::ModelPtr sensor_model)
+  {
+    using namespace ignition::math;
+
+    std::vector<std::string> removed_models;
+
+    physics::Model_V models = this->world->Models();
+
+    AxisAlignedBox sensor_bbx = sensor_model->CollisionBoundingBox();
+
+    for (size_t i = 0; i < models.size(); i++)
+    {
+      AxisAlignedBox model_bbx = models[i]->CollisionBoundingBox();
+      
+      if(sensor_bbx.Intersects(model_bbx))
+      {
+        this->world->RemoveModel(models[i]);
+        removed_models.push_back(models[i]->GetName());
+      }
+    }
+    
+    return removed_models;
+  }
+
 
   // POINT CLOUD FUNCTIONS
   /////////////////////////////////
@@ -855,28 +918,32 @@ namespace gazebo
     Vector3d position;
     Vector3d rotation;
 
-    rotation.X() = Rand::DblUniform(0, 2*M_PI);
-    rotation.Y() = Rand::DblUniform(0, 2*M_PI);
-    rotation.Z() = Rand::DblUniform(0, 2*M_PI);
-
     if (this->RANDMODE == "uniform")
     {
       position.X() = Rand::DblUniform(this->neg_dist.X(), this->pos_dist.X()); 
       position.Y() = Rand::DblUniform(this->neg_dist.Y(), this->pos_dist.Y()); 
       position.Z() = Rand::DblUniform(this->neg_dist.Z(), this->pos_dist.Z()); 
+      
+      rotation.X() = Rand::DblUniform(0, this->rot_range[0]* (2*M_PI/360));
+      rotation.Y() = Rand::DblUniform(0, this->rot_range[1]* (2*M_PI/360));
+      rotation.Z() = Rand::DblUniform(0, this->rot_range[2]* (2*M_PI/360));
     }
     else if (this->RANDMODE == "normal")
     {
       position.X() = Rand::DblNormal(0,this->pos_dist.X()); 
       position.Y() = Rand::DblNormal(0,this->pos_dist.Y()); 
       position.Z() = Rand::DblNormal(0,this->pos_dist.Z()); 
+
+      rotation.X() = Rand::DblNormal(0, (this->rot_range[0]*(2*M_PI/360))/3);
+      rotation.Y() = Rand::DblNormal(0, (this->rot_range[1]*(2*M_PI/360))/3);
+      rotation.Z() = Rand::DblNormal(0, (this->rot_range[2]*(2*M_PI/360))/3);
     }
     else
     {
       ROS_ERROR("WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal");
     }
 
-    position = this->ApplyOffset(position);
+    // position = this->ApplyOffset(position);
     pose.Set(position, rotation);
 
     return pose;
@@ -973,6 +1040,33 @@ namespace gazebo
     scale.Z() = ignition::math::Rand::DblUniform(min_scale_.Z(), max_scale_.Z());
 
     return scale;
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  bool DatasetGenerator::ReachPositionOffset(ignition::math::Pose3d pose)
+  {
+    float distance = this->sensor_model->WorldPose().Pos().Distance(pose.Pos());
+
+    if (distance > this->sensor_offset)
+      return true;
+    else
+      return false;
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  /**
+   * @brief
+   * @param 
+   * @return
+  */
+  bool collisionBbx(ignition::math::AxisAlignedBox box1, ignition::math::AxisAlignedBox box2)
+  {
+    if (box1.Intersects(box2))
+      return true;
+    else
+      return false;
   }
 
   /////////////////////////////////

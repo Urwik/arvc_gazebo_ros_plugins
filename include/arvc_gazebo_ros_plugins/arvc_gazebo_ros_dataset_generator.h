@@ -230,6 +230,19 @@ namespace gazebo
     private: ignition::math::Vector3d ComputeRandomScale(ignition::math::Vector3d min_scale_, ignition::math::Vector3d max_scale_);
 
     /**
+     * @brief Check that pose dont lies inside truss structure
+     * @return Return true if pose is valid
+     */
+    private: bool ReachPositionOffset(ignition::math::Pose3d pose);
+
+
+    /**
+     * @brief Remove models that collide with sensor
+     * 
+     */
+    private: std::vector<std::string> RemoveCollideModels(physics::ModelPtr sensor_model);
+
+    /**
      * @brief Apply offset to the passed coordinate.
      * @return the new vector
      */
@@ -282,7 +295,7 @@ namespace gazebo
     private: sensors::CameraSensorPtr camera;
     private: ignition::math::Pose3d camera_pose;
     private: std::string cam_name;
-    
+     
 
     // CONFIGURATION
     private: YAML::Node config;
@@ -304,9 +317,10 @@ namespace gazebo
     private: ignition::math::Vector3d neg_dist;
     private: ignition::math::Vector3d min_scale;
     private: ignition::math::Vector3d max_scale;
+    private: ignition::math::Vector3d rot_range;
     private: bool debug_msgs;
     private: bool pc_binary;
-    
+    private: float sensor_offset;
 
     //ROS
     private: ros::NodeHandle* ros_node;

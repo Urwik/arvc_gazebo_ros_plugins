@@ -459,6 +459,17 @@ class MoveModel : public WorldPlugin
 
 
 ////////////////////////////////////////////////////////////////////////////////
+  /**
+   * @brief
+   * @param 
+   * @return
+  */
+  private: bool collisionBbx(ignition::math::AxisAlignedBox box1, ignition::math::AxisAlignedBox box2)
+  {
+    
+  }
+
+////////////////////////////////////////////////////////////////////////////////
   private: void QueueThread()
   {
     static const double timeout = 0.01;
