@@ -103,6 +103,7 @@ class CollisionDetector : public WorldPlugin
     this->world->InsertModelSDF(*sdf_ptr_2);
   }
 
+  //////////////////////////////////////////////////////////////////////////////
   private: void checkCollisions()
   {
     using namespace ignition::math;
