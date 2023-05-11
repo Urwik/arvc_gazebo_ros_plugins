@@ -325,5 +325,7 @@ namespace gazebo
     private: bool take_screenshot;
     private: int env_count;
     private: int laser_retro;
+    private: bool paused;
+    private: boost::thread generator_thread;
   };
 }

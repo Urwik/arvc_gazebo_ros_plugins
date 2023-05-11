@@ -12,6 +12,8 @@ namespace gazebo
   // Constructor
   PubWorldTF::PubWorldTF()
   {
+    this->_nh.reset(new ros::NodeHandle("gazebo_client"));
+    this->_tf_broadcaster.reset(new tf2_ros::TransformBroadcaster());
   }
 
 
@@ -27,13 +29,11 @@ namespace gazebo
   {
     this->model = _parent;
 
-    if (_sdf->HasElement("target_frame")) {
+    // Parse args from SDF
+    if (_sdf->HasElement("target_frame"))
       this->frameName = _sdf->GetElement("target_frame")->Get<std::string>();
-      std::cout << "DETECTA QUE HAY UN FRAMENAME" << std::endl;
-    }
     else
       this->frameName = "base_link";
-
 
     this->updateConnection = event::Events::ConnectWorldUpdateBegin(
         std::bind(&PubWorldTF::OnUpdate, this));
@@ -44,15 +44,10 @@ namespace gazebo
       return;
     }
     
-    this->nh_.reset(new ros::NodeHandle("gazebo_client"));
+    boost::thread ros_pub_thread(boost::bind(&PubWorldTF::PubThread, this));
 
-    br2.reset(new tf2_ros::TransformBroadcaster());
-
-    boost::thread ros_pub_thread(boost::bind(&PubWorldTF::PubTF, this));
-
-
-    ROS_INFO("PUB TF BETWEEN %s - gz_world", this->frameName.c_str());
     ROS_INFO("----- TF PLUGIN LOADED CORRECTLY -----");
+    ROS_INFO("----- %s --> gz_world -----", this->frameName.c_str());
   }
 
 
@@ -63,7 +58,7 @@ namespace gazebo
 
 
   //////////////////////////////////////////////////////////////////////////////
-  void PubWorldTF::PubTF(){
+  void PubWorldTF::PubThread(){
 
     int seq = 0;
     while(true)
@@ -88,7 +83,7 @@ namespace gazebo
       transform.transform.rotation.y = this->model->WorldPose().Rot().Y();
       transform.transform.rotation.z = this->model->WorldPose().Rot().Z();      
 
-      this->br2->sendTransform(transform);
+      this->_tf_broadcaster->sendTransform(transform);
       seq++;
 
       ros::spinOnce();
