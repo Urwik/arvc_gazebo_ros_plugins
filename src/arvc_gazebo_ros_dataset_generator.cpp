@@ -12,6 +12,7 @@
 #include <gazebo/gazebo.hh>
 #include <gazebo/sensors/sensors.hh>
 #include <gazebo/sensors/CameraSensor.hh>
+#include <gazebo/common/Console.hh>
 #include <ignition/math/Pose3.hh>
 #include <ignition/math/Vector3.hh>
 
@@ -49,7 +50,9 @@ namespace gazebo
   // Register this plugin with the simulator
   GZ_REGISTER_WORLD_PLUGIN(DatasetGenerator)
   /////////////////////////////////
+
   DatasetGenerator::DatasetGenerator(){
+    std::cout << RED << "DatasetGenerator constructor" << RESET << std::endl;
     this->env_count = 0;
     this->ousterReady = false;
     this->handle_to_cam = false;
@@ -57,6 +60,7 @@ namespace gazebo
     this->pcl_cloud.reset(new PointCloud);
     this->take_screenshot = false;
     this->laser_retro = 1;
+    this->paused = true;
   }
 
   /////////////////////////////////
@@ -68,6 +72,7 @@ namespace gazebo
     this->pcl_cloud.reset(new PointCloud);
     this->take_screenshot = false;
     this->laser_retro = 1;
+    this->paused = false;
   }
 
 
@@ -97,6 +102,13 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::Init()
   { 
+    this->env_count = 0;
+    this->ousterReady = false;
+    this->handle_to_cam = false;
+
+    this->pcl_cloud.reset(new PointCloud);
+    this->take_screenshot = false;
+    this->laser_retro = 1;
   }
 
 
@@ -115,16 +127,18 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::GenerateDataset()
   {
+    // std::this_thread::sleep_for(std::chrono::milliseconds(7000));
+
     std::vector<std::string> env_models_;
     std::vector<std::string> models_;
     int estado = 0;
     int env_count_ = 0;
+    gazebo::common::Console::SetQuiet(true);
 
     while (this->env_count < this->NUM_ENV)
     {
       switch (estado)
       {
-      
       case 0:
         if(this->SensorReady()){
           this->ResumeEnvCount();
@@ -138,14 +152,19 @@ namespace gazebo
         ROS_INFO(YELLOW "GENERATING RANDOM ENVIROMENT: %d" RESET, this->env_count);
         this->MoveGroundModel();
         env_models_ = this->SpawnRandomEnviroment();
-        models_ = this->SpawnRandomModels();
-        this->ApplyRotation(this->sensor_model, this->ComputeRandRotation());
+        // models_ = this->SpawnRandomModels();
+        // this->ApplyRotation(this->sensor_model, this->ComputeRandRotation());
         estado = 2;
         break;
       
       case 2:
         if (this->CheckSpawnedModels(models_) && this->CheckSpawnedModels(env_models_))
         {
+          if(this->paused)
+          {
+            ROS_INFO(YELLOW "PAUSED: Press enter to continue ..." RESET);
+            std::getchar();
+          }
           estado = 3;
         }
         break;
@@ -169,12 +188,15 @@ namespace gazebo
           // this->env_count++;
           // estado = 1;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
         break;
 
       default:
         break;
+
       }
+
+
+
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -328,6 +350,14 @@ namespace gazebo
       this->debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
     }
       std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
+
+    // PAUSES THE PROGRAM UNTIL USER PRESS ENTER
+    if (!sdf->HasElement("paused")) {
+      this->paused = this->config["plugin"]["paused"].as<bool>();
+    } else {
+      this->paused = sdf->GetElement("paused")->Get<bool>();
+    }
+      std::cout << YELLOW << "PAUSED MODE: " << RESET << "\n " << this->paused << std::endl;
   }
 
   /////////////////////////////////
@@ -411,6 +441,8 @@ namespace gazebo
   /////////////////////////////////
   fs::path DatasetGenerator::GetTemporarySDFfile(fs::path path)
   {
+    ROS_INFO_COND(this->debug_msgs, "GENERATING TEMPORARY SDF FILE");
+
     std::string suffix = "_copy";
     fs::path new_path;
 
@@ -428,6 +460,8 @@ namespace gazebo
   /////////////////////////////////
   fs::path DatasetGenerator::ResetTemporarySDFfile(fs::path orig_path)
   {
+    ROS_INFO_COND(this->debug_msgs, "RESETING TEMPORARY SDF FILE");
+
     fs::path new_path = this->GetTemporarySDFfile(orig_path);
     return new_path;
   }
@@ -467,7 +501,8 @@ namespace gazebo
   }
 
   /////////////////////////////////
-  std::vector<std::string> DatasetGenerator::SpawnRandomEnviroment()
+  std::vector<std::string> 
+  DatasetGenerator::SpawnRandomEnviroment()
   {
     ROS_INFO_COND(this->debug_msgs, "SPAWNING ENVIROMENT...");
 
@@ -476,6 +511,7 @@ namespace gazebo
     
     for (const fs::directory_entry &entry : fs::directory_iterator(this->env_dir))
     {
+      fs::path original_file = entry.path() / "model.sdf";
       int num_models_ = ignition::math::Rand::IntUniform(3, 7);
       fs::path temp_file = GetTemporarySDFfile(entry.path() / "model.sdf");
 
