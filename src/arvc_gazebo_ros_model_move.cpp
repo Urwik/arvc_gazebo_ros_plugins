@@ -96,6 +96,11 @@ class MoveModel : public WorldPlugin
    */
   public: void Init()
   { 
+    gazebo::common::Console::SetQuiet(true);
+    this->pcl_cloud.reset(new PointCloud);
+    this->handle_to_cam = false;
+    this->handle_to_model = false;
+
     this->truss_structue = this->world->ModelByName("reticular_structure");
 
     physics::Link_V links = this->truss_structue->GetLinks();
@@ -113,23 +118,12 @@ class MoveModel : public WorldPlugin
    */
   private: void OnUpdate()
   { 
-    if(!this->handle_to_model){
-      if(!this->target_model)
-            this->target_model = this->world->ModelByName("os_128");
-      else{
-        ROS_INFO(BLUE "HANDLE TO MODEL OBTAINED CORRECTLY" RESET);
-        this->handle_to_model = true;
-      }
-    }
+    if(!this->handle_to_model)
+      this->GetModelPointer("os_128");
 
     if(!this->handle_to_cam)
-    {
-      if(this->GetCamera())
-      {
-        ROS_INFO(BLUE "HANDLE TO CAM OBTAINED CORRECTLY" RESET);
-        this->handle_to_cam = true;
-      }
-    }
+      this->GetCameraSensor("arvc_cam");
+
   }
 
 
@@ -145,6 +139,7 @@ class MoveModel : public WorldPlugin
       {
       case 0:
         if(this->CheckOusterReady()){
+          std::this_thread::sleep_for(std::chrono::milliseconds(3000));
           ROS_INFO(GREEN "STARTING TO MOVE THE MODEL..." RESET);
           estado = 1;
         }
@@ -153,6 +148,13 @@ class MoveModel : public WorldPlugin
       case 1:
         ROS_INFO( YELLOW "ENVIROMENT %d" RESET, this->env_count);
         this->MoveTargetModel();
+
+        if(this->paused)
+        {
+          ROS_INFO(YELLOW "PAUSED: Press enter to continue ..." RESET);
+          std::getchar();
+        }
+
         estado = 2;
         break;
       
@@ -236,19 +238,44 @@ class MoveModel : public WorldPlugin
     }
     std::cout << BLUE << "DEBUG: " << RESET << '\n' << this->num_env << std::endl;
 
+    // PAUSES THE PROGRAM UNTIL USER PRESS ENTER
+    if (!sdf->HasElement("paused")) {
+      this->paused = true;
+    } else {
+      this->paused = sdf->GetElement("paused")->Get<bool>();
+    }
+      std::cout << YELLOW << "PAUSED MODE: " << RESET << "\n " << this->paused << std::endl;
   }
 
 
 ////////////////////////////////////////////////////////////////////////////////
-  private: bool GetCamera()
+  private: bool GetCameraSensor(std::string _sensor_name)
   {
-    this->camera_sensor = sensors::get_sensor("arvc_cam");
+    this->camera_sensor = sensors::get_sensor(_sensor_name);
 
     if(!this->camera_sensor)
       return false;
     else 
     {
       this->arvc_cam = std::dynamic_pointer_cast<sensors::CameraSensor>(this->camera_sensor);
+      this->handle_to_cam = true;
+      ROS_INFO(GREEN "HANDLE TO CAM OBTAINED CORRECTLY" RESET);
+      return true;
+    }
+  }
+
+
+////////////////////////////////////////////////////////////////////////////////
+  private: bool GetModelPointer(std::string _model_name)
+  {
+    this->target_model = this->world->ModelByName(_model_name);
+
+    if(!this->target_model)
+      return false;
+    else
+    {
+      ROS_INFO(BLUE "HANDLE TO MODEL OBTAINED CORRECTLY" RESET);
+      this->handle_to_model = true;
       return true;
     }
   }
@@ -257,7 +284,9 @@ class MoveModel : public WorldPlugin
 ////////////////////////////////////////////////////////////////////////////////
   private: void InsertCamera()
   {
-    sdf::SDFPtr camera_sdf = this->GetSDFfile("/home/arvc/workSpaces/arvc_ws/src/arvc_dataset_generator/models/camera_test/model.sdf");
+    fs::path dg_pack_path = ros::package::getPath("arvc_dataset_generator");
+    fs::path camera_sdf_path = dg_pack_path / "models/camera_test/model.sdf";
+    sdf::SDFPtr camera_sdf = this->GetSDFfile(camera_sdf_path.string());
     this->world->InsertModelSDF(*camera_sdf);
   }
 
@@ -315,6 +344,8 @@ class MoveModel : public WorldPlugin
     this->world->SetPaused(true);
     this->target_model->SetWorldPose(pose);
     this->world->SetPaused(false);
+    ROS_INFO_COND(this->arvc_debug, YELLOW "MODEL MOVED" RESET);
+
   }
 
 
@@ -525,6 +556,7 @@ class MoveModel : public WorldPlugin
     bool pc_binary = true;
     physics::ModelPtr truss_structue;
     std::vector<ignition::math::AxisAlignedBox> links_bbx;
+    bool paused = true;
 
 
 
