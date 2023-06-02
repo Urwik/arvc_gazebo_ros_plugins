@@ -119,13 +119,13 @@ namespace gazebo
     std::vector<std::string> models_;
     std::vector<std::string> rmvd_models; 
     int estado = 0;
-    int env_count_ = 0;
 
     while (this->env_count < this->NUM_ENV)
     {
       switch (estado)
       {
         
+        // CHECK IF SENSOR IS READY
         case 0:
           if(this->SensorReady()){
             this->ResumeEnvCount();
@@ -135,6 +135,7 @@ namespace gazebo
           }
           break;
 
+        // INSERT ENVIROMENT MODELS AND LABELED MODELS IN THE WORLD
         case 1:
           ROS_INFO(YELLOW "GENERATING RANDOM ENVIROMENT: %d" RESET, this->env_count);
           this->MoveGroundModel();
@@ -144,18 +145,27 @@ namespace gazebo
           estado = 2;
           break;
         
+        // REMOVING MODELS THAT ARE IN COLLISION WITH THE SENSOR
         case 2:
           ROS_INFO_COND(this->debug_msgs, YELLOW "CALLING REMOVE COLLIDE MODELS" RESET);
 
           rmvd_models = this->RemoveCollideModels(this->sensor_model);
 
-          for (size_t i = 0; i < models_.size(); i++)
-            std::cout << rmvd_models[i] << std::endl;
+          if (this->debug_msgs)
+          {
+            ROS_INFO_COND(this->debug_msgs, BLUE "REMOVED MODELS: " RESET);
+            if (rmvd_models.size() > 0)
+            {
+              for (size_t i = 0; i < rmvd_models.size(); i++)
+                std::cout << rmvd_models[i] << std::endl;
+            }
+          }
 
           ROS_INFO_COND(this->debug_msgs, GREEN "PASSED REMOVE COLLIDE MODELS" RESET);
           estado = 3;
           break;
 
+        // CHECK THAT ALL MODELS ARE CORRECTLY SPAWNED
         case 3:
           if (this->CheckSpawnedModels(models_) && this->CheckSpawnedModels(env_models_))
           {
@@ -163,6 +173,7 @@ namespace gazebo
           }
           break;
         
+        // SAVE DATA AND REMOVE MODELS
         case 4:
           this->TakeScreenShot();
           this->SavePointCloud();
@@ -170,6 +181,7 @@ namespace gazebo
           estado = 5;
           break;
         
+        // CHECK THAT ALL MODELS ARE REMOVED CORRECTLY
         case 5:
           if(this->CheckDeletedModels(models_) && this->CheckDeletedModels(env_models_))
           {
@@ -195,7 +207,7 @@ namespace gazebo
   }
 
   // CONFIGURATION AND PARSING ARGUMENTS
-  /////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::ParseArgs(sdf::ElementPtr sdf)
   {
     ROS_INFO(BLUE "PARSING ARGUMENTS... " RESET);
@@ -212,11 +224,11 @@ namespace gazebo
 
     // ENVIROMENT MODELS DIRECTORY
     if (!sdf->HasElement("env_dir")) {
-      this->env_dir = this->config["plugin"]["env_dir"].as<std::string>();
+      this->ENV_DIR = this->config["plugin"]["env_dir"].as<std::string>();
     } else {
-      this->env_dir = sdf->GetElement("env_dir")->Get<std::string>();
+      this->ENV_DIR = sdf->GetElement("env_dir")->Get<std::string>();
     }
-    std::cout << YELLOW << "ENVIROMENTS DIR: " << RESET << "\n " << this->env_dir.c_str() << std::endl;
+    std::cout << YELLOW << "ENVIROMENTS DIR: " << RESET << "\n " << this->ENV_DIR.c_str() << std::endl;
 
     // LABELED MODELS DIRECTORY
     if (!sdf->HasElement("mod_dir")) {
@@ -356,7 +368,8 @@ namespace gazebo
       std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::GetYamlConfig()
   {
     fs::path package_path(ros::package::getPath("arvc_dataset_generator"));
@@ -369,7 +382,7 @@ namespace gazebo
 
 
   // CAMERA FUNCTIONS
-  /////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::InsertCameraModel()
   {
     sdf::SDFPtr camera_sdf = this->GetSDFfile(this->cam_path);
@@ -385,7 +398,8 @@ namespace gazebo
     this->cam_name = sensor->GetAttribute("name")->GetAsString();
   }
   
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   bool DatasetGenerator::GetCameraPointer()
   {
     ROS_INFO_COND(this->debug_msgs, YELLOW "TRYING TO GET CAMERA: %s" RESET, this->cam_name.c_str());
@@ -403,7 +417,8 @@ namespace gazebo
     }
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::TakeScreenShot()
   {
     ROS_INFO_COND(this->debug_msgs, "TAKING SCREENSHOT");
@@ -415,7 +430,8 @@ namespace gazebo
     this->camera->SaveFrame(ss.str().c_str());
   }
   
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   ignition::math::Pose3d DatasetGenerator::GetCameraSensorTF()
   {
     ignition::math::Pose3d sensor_pose = this->sensor_model->WorldPose();
@@ -424,7 +440,7 @@ namespace gazebo
 
 
   // GENERATION FUNCTIONS
-  /////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   sdf::SDFPtr DatasetGenerator::GetSDFfile(fs::path sdfPath)
   {
 
@@ -435,7 +451,8 @@ namespace gazebo
     return sdf_file;
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   fs::path DatasetGenerator::GetTemporarySDFfile(fs::path path)
   {
     std::string suffix = "_copy";
@@ -452,14 +469,16 @@ namespace gazebo
     return new_path;
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   fs::path DatasetGenerator::ResetTemporarySDFfile(fs::path orig_path)
   {
     fs::path new_path = this->GetTemporarySDFfile(orig_path);
     return new_path;
   }
 
-  /////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
   std::vector<std::string> DatasetGenerator::SpawnRandomModels()
   {
     ROS_INFO_COND(this->debug_msgs, "SPAWNING MODELS...");
@@ -493,7 +512,12 @@ namespace gazebo
     return models;
   }
 
-  /////////////////////////////////
+  /**
+   * @brief For each model located in ENV_DIR, inserts a random number of it in 
+   * random position (fixed orientation) and scale 
+   * 
+   * @return Vector with the names of the inserted models
+   */
   std::vector<std::string> DatasetGenerator::SpawnRandomEnviroment()
   {
     ROS_INFO_COND(this->debug_msgs, "SPAWNING ENVIROMENT...");
@@ -501,7 +525,7 @@ namespace gazebo
     std::vector<std::string> models;
     std::string model_name;
     
-    for (const fs::directory_entry &entry : fs::directory_iterator(this->env_dir))
+    for (const fs::directory_entry &entry : fs::directory_iterator(this->ENV_DIR))
     {
       int num_models_ = ignition::math::Rand::IntUniform(3, 7);
       fs::path temp_file = GetTemporarySDFfile(entry.path() / "model.sdf");
@@ -695,7 +719,8 @@ namespace gazebo
     
   }
 
-  /////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
+  /// @brief Moves groud model randomly
   void DatasetGenerator::MoveGroundModel()
   {
     ROS_INFO_COND(this->debug_msgs, "MOVING GROUND MODEL");
@@ -766,7 +791,10 @@ namespace gazebo
     }
   }
 
-  /////////////////////////////////
+  /**
+   * @brief Check if sensor is currently working in Gazebo.
+   * @return true if sensor is working.
+   */
   bool DatasetGenerator::SensorReady()
   {
     ROS_INFO_COND(this->debug_msgs, "CHECKING IF OUSTER IS READY");
@@ -816,17 +844,19 @@ namespace gazebo
     std::vector<std::string> removed_models;
 
     physics::Model_V models = this->world->Models();
-
     AxisAlignedBox sensor_bbx = sensor_model->CollisionBoundingBox();
 
     for (size_t i = 0; i < models.size(); i++)
     {
-      AxisAlignedBox model_bbx = models[i]->CollisionBoundingBox();
-      
-      if(sensor_bbx.Intersects(model_bbx))
+      if(models[i]->GetName() != this->sensor_model->GetName())
       {
-        this->world->RemoveModel(models[i]);
-        removed_models.push_back(models[i]->GetName());
+        AxisAlignedBox model_bbx = models[i]->CollisionBoundingBox();
+        
+        if(sensor_bbx.Intersects(model_bbx))
+        {
+          removed_models.push_back(models[i]->GetName());
+          this->world->RemoveModel(models[i]);
+        }
       }
     }
     
@@ -1063,7 +1093,7 @@ namespace gazebo
   */
   bool collisionBbx(ignition::math::AxisAlignedBox box1, ignition::math::AxisAlignedBox box2)
   {
-    if (box1.Intersects(box2))
+    if (box1.Intersects(box2) || box2.Intersects(box1))
       return true;
     else
       return false;
@@ -1101,7 +1131,11 @@ namespace gazebo
     return output;
   }
 
-  /////////////////////////////////
+  /**
+   * @brief Aplly rotation to a model
+   * @param model_ptr Pointer to a model in gazebo
+   * @param rotation Rotation vector R P Y
+   */
   void DatasetGenerator::ApplyRotation(physics::ModelPtr model_ptr, ignition::math::Vector3d rotation)
   {
     ignition::math::Pose3d pose;

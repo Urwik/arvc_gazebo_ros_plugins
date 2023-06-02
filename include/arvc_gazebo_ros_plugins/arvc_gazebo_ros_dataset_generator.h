@@ -161,7 +161,8 @@ namespace gazebo
     /// @brief Check output directories format, and create if don't exists
     private: void CheckOutputDirs();
 
-    /// @brief Get last saved cloud count and continue from that number
+    /// @brief Get last saved cloud by writing time and set env count to this value
+    /// to continue from that number
     private: void ResumeEnvCount();
 
     /**
@@ -302,7 +303,7 @@ namespace gazebo
     private: std::string RANDMODE;
     private: int NUM_ENV;
     private: int NUM_MODELS;
-    private: std::filesystem::path env_dir;
+    private: std::filesystem::path ENV_DIR;
     private: std::filesystem::path models_dir;
     private: std::filesystem::path output_dir;
     private: std::filesystem::path pcd_dir;
