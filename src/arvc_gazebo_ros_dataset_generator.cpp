@@ -735,7 +735,7 @@ namespace gazebo
     std::cout << YELLOW << "IMAGES OUTPUT DIR: " << RESET << "\n " << this->images_dir.c_str() << std::endl;
   }
 
-  /////////////////////////////////
+  /// @brief Get last saved cloud count and continue from that number
   void DatasetGenerator::ResumeEnvCount()
   {
     fs::directory_entry last_entry;
@@ -772,7 +772,11 @@ namespace gazebo
     }
   }
 
-  /////////////////////////////////
+  /**
+   * @brief Check if the sensor is ready. It tries to get a model with name saved in "sensor_name"
+   * @return true if the sensor is ready
+   * 
+  */
   bool DatasetGenerator::SensorReady()
   {
     ROS_INFO_COND(this->debug_msgs, "CHECKING IF OUSTER IS READY");

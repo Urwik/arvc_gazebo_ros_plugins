@@ -276,12 +276,15 @@ namespace gazebo
     // GAZEBO
     private: physics::WorldPtr world;
     private: physics::ModelPtr model;
-    private: physics::ModelPtr sensor_model;
     private: event::ConnectionPtr updateConnection;
+
+    // SENSORS    
+    private: physics::ModelPtr sensor_model;
     private: physics::ModelPtr camera_model;
     private: sensors::CameraSensorPtr camera;
     private: ignition::math::Pose3d camera_pose;
     private: std::string cam_name;
+
     
 
     // CONFIGURATION
@@ -304,7 +307,6 @@ namespace gazebo
     private: ignition::math::Vector3d neg_dist;
     private: ignition::math::Vector3d min_scale;
     private: ignition::math::Vector3d max_scale;
-    private: bool debug_msgs;
     private: bool pc_binary;
     
 
@@ -320,6 +322,7 @@ namespace gazebo
     private: pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud;
 
     // HELPERS
+    private: bool debug_msgs;
     private: bool ousterReady;
     private: bool handle_to_cam;
     private: bool take_screenshot;
