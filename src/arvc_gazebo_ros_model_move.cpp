@@ -500,18 +500,22 @@ class MoveModel : public WorldPlugin
   }
 
 
+  // VARIABLES
+  
+  // GAZEBO
   public:
     physics::WorldPtr world;
     physics::ModelPtr target_model;
-    transport::NodePtr gz_node;
-    transport::PublisherPtr gz_pub;
-    transport::SubscriberPtr gz_sub;
+
+
+  // CONFIGURATION
     ignition::math::Vector3d pos_offset,
                              neg_offset,
                              pos_dist,
                              neg_dist,
                              min_scale,
                              max_scale;
+
     std::string randMode;
     int laser_retro = 1;
     int env_count = 0;
@@ -531,7 +535,6 @@ class MoveModel : public WorldPlugin
 
     //THREADS
     // boost::thread arvc_thread;
-    boost::mutex arvc_mutex;
 
     //PCL
     fs::path env_dir;
