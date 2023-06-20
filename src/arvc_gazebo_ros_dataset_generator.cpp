@@ -182,6 +182,7 @@ namespace gazebo
         break;
       
       case 3:
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         // this->TakeScreenShot();
         this->SavePointCloud();
         this->removeModelsByName(all_models_);
