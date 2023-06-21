@@ -538,7 +538,10 @@ class MoveModel : public WorldPlugin
     for (AxisAlignedBox bbx : this->links_bbx)
     {
       if(bbx.Contains(position))
+      {
+        ROS_INFO_COND(this->debug_msgs, RED "INVALID POSE COMPUTED, RECOMPUTING..." RESET);
         return false;
+      }
     }
     
     return true;
