@@ -22,7 +22,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-
+#include "arvc_gazebo_ros_plugins/arvc_dataset_generator_utils.hpp"
 
 namespace gazebo
 {
@@ -299,7 +299,7 @@ namespace gazebo
      
 
     // CONFIGURATION
-    private: YAML::Node config;
+    private: arvc::configuration config;
     private: std::string RANDMODE;
     private: int NUM_ENV;
     private: int NUM_MODELS;
@@ -340,5 +340,6 @@ namespace gazebo
     private: bool take_screenshot;
     private: int env_count;
     private: int laser_retro;
+    private: bool paused;
   };
 }
