@@ -290,13 +290,15 @@ namespace gazebo
     // GAZEBO
     private: physics::WorldPtr world;
     private: physics::ModelPtr model;
-    private: physics::ModelPtr sensor_model;
     private: event::ConnectionPtr updateConnection;
+
+    // SENSORS    
+    private: physics::ModelPtr sensor_model;
     private: physics::ModelPtr camera_model;
     private: sensors::CameraSensorPtr camera;
     private: ignition::math::Pose3d camera_pose;
     private: std::string cam_name;
-     
+    
 
     // CONFIGURATION
     private: arvc::configuration config;
@@ -335,11 +337,13 @@ namespace gazebo
     private: pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud;
 
     // HELPERS
+    private: bool debug_msgs;
     private: bool ousterReady;
     private: bool handle_to_cam;
     private: bool take_screenshot;
     private: int env_count;
     private: int laser_retro;
     private: bool paused;
+    private: boost::thread generator_thread;
   };
 }

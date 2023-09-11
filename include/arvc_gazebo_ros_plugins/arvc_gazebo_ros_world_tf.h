@@ -32,15 +32,15 @@ namespace gazebo
     public: void OnUpdate();
     
     /// \brief Publish tf between model and gazebo world frame
-    private: void PubTF();
+    private: void PubThread();
       
 
     // Pointer to the model
     private:  physics::ModelPtr model;
               ignition::math::Pose3d world_pose;
-              std::unique_ptr<ros::NodeHandle> nh_;
+              std::unique_ptr<ros::NodeHandle> _nh;
               ros::Publisher pub_;
-              boost::shared_ptr<tf2_ros::TransformBroadcaster> br2;
+              boost::shared_ptr<tf2_ros::TransformBroadcaster> _tf_broadcaster;
               tf::Transform tf;
               event::ConnectionPtr updateConnection;
               std::string frameName;

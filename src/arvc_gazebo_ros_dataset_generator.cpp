@@ -10,7 +10,6 @@
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 
-
 // GAZEBO
 #include <sdf/sdf.hh>
 #include <gazebo/gazebo.hh>
@@ -53,6 +52,7 @@ namespace gazebo
   // Register this plugin with the simulator
   GZ_REGISTER_WORLD_PLUGIN(DatasetGenerator)
   /////////////////////////////////
+
   DatasetGenerator::DatasetGenerator(){
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->env_count = 0;
@@ -95,7 +95,8 @@ namespace gazebo
     this->updateConnection =  event::Events::ConnectWorldUpdateBegin(
                               boost::bind(&DatasetGenerator::OnUpdate, this));
 
-    boost::thread generator_thread(boost::bind(&DatasetGenerator::GenerateDataset, this));
+    // boost::thread generator_thread(boost::bind(&DatasetGenerator::GenerateDataset, this));
+    this->generator_thread = boost::thread(boost::bind(&DatasetGenerator::GenerateDataset, this));
 
     ROS_INFO(GREEN "ARVC GAZEBO SPAWNMODEL PLUGIN LOADED" RESET);
   }
@@ -104,6 +105,13 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::Init()
   { 
+    this->env_count = 0;
+    this->ousterReady = false;
+    this->handle_to_cam = false;
+
+    this->pcl_cloud.reset(new PointCloud);
+    this->take_screenshot = false;
+    this->laser_retro = 1;
   }
 
 
@@ -122,89 +130,82 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::GenerateDataset()
   {
+    // std::this_thread::sleep_for(std::chrono::milliseconds(7000));
+
     std::vector<std::string> env_models_;
     std::vector<std::string> models_;
-    std::vector<std::string> rmvd_models; 
+    std::vector<std::string> all_models_;
+
     int estado = 0;
+    int env_count_ = 0;
+    gazebo::common::Console::SetQuiet(true);
 
     while (this->env_count < this->NUM_ENV)
     {
       switch (estado)
       {
-        
-        // CHECK IF SENSOR IS READY
-        case 0:
-          if(this->SensorReady()){
-            this->ResumeEnvCount();
-            ROS_INFO(GREEN "STARTING TO SPAWN MODELS..." RESET);
-            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-            estado = 1;
-          }
-          break;
+      case 0:
+        if(this->SensorReady()){
+          this->ResumeEnvCount();
+          ROS_INFO(GREEN "STARTING TO SPAWN MODELS..." RESET);
+          std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+          estado = 1;
+        }
+        break;
 
-        // INSERT ENVIROMENT MODELS AND LABELED MODELS IN THE WORLD
-        case 1:
-          ROS_INFO(YELLOW "GENERATING RANDOM ENVIROMENT: %d" RESET, this->env_count);
-          this->MoveGroundModel();
-          env_models_ = this->SpawnRandomEnviroment();
-          models_ = this->SpawnRandomModels();
-          this->ApplyRotation(this->sensor_model, this->ComputeRandRotation());
-          estado = 2;
-          break;
-        
-        // REMOVING MODELS THAT ARE IN COLLISION WITH THE SENSOR
-        case 2:
-          ROS_INFO_COND(this->debug_msgs, YELLOW "CALLING REMOVE COLLIDE MODELS" RESET);
+      case 1:
+        ROS_INFO(YELLOW "GENERATING RANDOM ENVIROMENT: %d" RESET, this->env_count);
+        this->MoveGroundModel();
+        env_models_ = this->SpawnRandomEnviroment();
+        models_ = this->SpawnRandomModels();
+        this->ApplyRotation(this->sensor_model, this->ComputeRandRotation());
 
-          rmvd_models = this->RemoveCollideModels(this->sensor_model);
+        all_models_.clear();
+        all_models_.resize(env_models_.size() + models_.size());
+	      std::set_union(env_models_.begin(), env_models_.end(), models_.begin(), models_.end(), all_models_.begin());
 
-          if (this->debug_msgs)
+        ROS_INFO_COND(this->debug_msgs, BLUE "MODELS SPAWNED: %d" RESET, (int) all_models_.size());
+
+        estado = 2;
+        break;
+      
+      case 2:
+        if (this->CheckSpawnedModels(all_models_))
+        {
+          if(this->paused)
           {
-            ROS_INFO_COND(this->debug_msgs, BLUE "REMOVED MODELS: " RESET);
-            if (rmvd_models.size() > 0)
-            {
-              for (size_t i = 0; i < rmvd_models.size(); i++)
-                std::cout << rmvd_models[i] << std::endl;
-            }
+            ROS_INFO(YELLOW "PAUSED: Press enter to continue ..." RESET);
+            std::getchar();
           }
-
-          ROS_INFO_COND(this->debug_msgs, GREEN "PASSED REMOVE COLLIDE MODELS" RESET);
           estado = 3;
-          break;
-
-        // CHECK THAT ALL MODELS ARE CORRECTLY SPAWNED
-        case 3:
-          if (this->CheckSpawnedModels(models_) && this->CheckSpawnedModels(env_models_))
-          {
-            estado = 4;
-          }
-          break;
-        
-        // SAVE DATA AND REMOVE MODELS
-        case 4:
-          this->TakeScreenShot();
-          this->SavePointCloud();
-          this->removeModels();
-          estado = 5;
-          break;
-        
-        // CHECK THAT ALL MODELS ARE REMOVED CORRECTLY
-        case 5:
-          if(this->CheckDeletedModels(models_) && this->CheckDeletedModels(env_models_))
-          {
-            this->env_count++;
-            estado = 1;
-          }
-          break;
-        
-        case 6:
+        }
+        break;
+      
+      case 3:
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        // this->TakeScreenShot();
+        this->SavePointCloud();
+        this->removeModelsByName(all_models_);
+        estado = 4;
+        break;
+      
+      case 4:
+        if(this->CheckDeletedModels(all_models_))
+        {
+          this->env_count++;
+          estado = 1;
+        }
+        break;
+      
+      case 5:
           // this->env_count++;
           // estado = 1;
-          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-          break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        break;
 
-        default:
-          break;
+      default:
+        break;
+
       }
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -353,32 +354,24 @@ namespace gazebo
   //   }
   //   std::cout << YELLOW << "CLOUD BINARY FORMAT: " << RESET << "\n " << this->pc_binary << std::endl;
 
-  //   // PLOT EXTRA INFORMATION MESSAVES OVER THE TERMINAL
-  //   if (!sdf->HasElement("debug_msgs")) {
-  //     this->debug_msgs = this->config["plugin"]["debug_msgs"].as<bool>();
-  //   } else {
-  //     this->debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
-  //   }
-  //     std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
+    // PLOT EXTRA INFORMATION MESSAVES OVER THE TERMINAL
+    if (!sdf->HasElement("debug_msgs")) {
+      this->debug_msgs = this->config["plugin"]["debug_msgs"].as<bool>();
+    } else {
+      this->debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
+    }
+      std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
 
-  //   // 
-  //   if (!sdf->HasElement("sensor_offset")) {
-  //     this->sensor_offset = this->config["plugin"]["sensor_offset"].as<float>();
-  //   } else {
-  //     this->sensor_offset = sdf->GetElement("sensor_offset")->Get<float>();
-  //   }
+    // PAUSES THE PROGRAM UNTIL USER PRESS ENTER
+    if (!sdf->HasElement("paused")) {
+      this->paused = this->config["plugin"]["paused"].as<bool>();
+    } else {
+      this->paused = sdf->GetElement("paused")->Get<bool>();
+    }
+      std::cout << YELLOW << "PAUSED MODE: " << RESET << "\n " << this->paused << std::endl;
+  }
 
-  //   // 
-  //   if (!sdf->HasElement("rotation_range")) {
-  //     this->rot_range = this->config["plugin"]["rotation_range"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->rot_range = sdf->GetElement("rotation_range")->Get<ignition::math::Vector3d>();
-  //   }
-  //     std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
-  // }
-
-
-  //////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////
   void DatasetGenerator::GetYamlConfig()
   {
     fs::path package_path(ros::package::getPath("arvc_dataset_generator"));
@@ -436,6 +429,7 @@ namespace gazebo
     ss.str("");
     ss << this->images_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".jpg";
     
+    this->camera->Update(true);
     this->camera->SaveFrame(ss.str().c_str());
   }
   
@@ -460,35 +454,36 @@ namespace gazebo
     return sdf_file;
   }
 
-
-  //////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////
   fs::path DatasetGenerator::GetTemporarySDFfile(fs::path path)
   {
-    std::string suffix = "_copy";
-    fs::path new_path;
+    ROS_INFO_COND(this->debug_msgs, "GENERATING TEMPORARY SDF FILE");
 
-    std::string ext = path.extension();
-    std::string in_filename = path.stem();
-    std::string out_filename = in_filename + suffix + ext; 
-    fs::path root_dir = path.parent_path();
-    new_path = root_dir / out_filename;
+    fs::path new_model_path = orig_path.parent_path() / "temp_model.sdf";
+    fs::path new_config_path = orig_path.parent_path() / "temp_model.config";
+    fs::path orig_config_path = orig_path.parent_path() / "model.config";
 
-    fs::copy_file(path, new_path, fs::copy_options::overwrite_existing);
+    fs::copy_file(orig_path, new_model_path, fs::copy_options::overwrite_existing);
+    fs::copy_file(orig_config_path, new_config_path, fs::copy_options::overwrite_existing);
 
-    return new_path;
+
+    return new_model_path;
   }
 
 
   //////////////////////////////////////////////////////////////////////////////
   fs::path DatasetGenerator::ResetTemporarySDFfile(fs::path orig_path)
   {
-    fs::path new_path = this->GetTemporarySDFfile(orig_path);
+    ROS_INFO_COND(this->debug_msgs, "RESETING TEMPORARY SDF FILE");
+
+    fs::path new_path;
+
     return new_path;
   }
 
-
-  //////////////////////////////////////////////////////////////////////////////
-  std::vector<std::string> DatasetGenerator::SpawnRandomModels()
+  /////////////////////////////////
+  std::vector<std::string> 
+  DatasetGenerator::SpawnRandomModels()
   {
     ROS_INFO_COND(this->debug_msgs, "SPAWNING MODELS...");
 
@@ -497,12 +492,12 @@ namespace gazebo
 
     for (const fs::directory_entry &entry : fs::directory_iterator(this->models_dir))
     {
-      fs::path temp_file = GetTemporarySDFfile(entry.path() / "model.sdf");
+      fs::path original_file = entry.path() / "model.sdf";
       this->laser_retro = 1;
 
       for (int i = 0; i < this->NUM_MODELS; i++)
       {
-        temp_file = this->ResetTemporarySDFfile(entry.path() / "model.sdf");
+        fs::path temp_file = this->GetTemporarySDFfile(original_file);
         sdf::SDFPtr temp_sdfFile = this->GetSDFfile(temp_file);
         sdf::ElementPtr modelElement = temp_sdfFile->Root()->GetElement("model");
 
@@ -515,19 +510,16 @@ namespace gazebo
 
         ROS_INFO_COND(this->debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
         this->world->InsertModelSDF(*temp_sdfFile);
+        boost::this_thread::sleep(boost::posix_time::milliseconds(10));
       }
     }
     ROS_INFO_COND(this->debug_msgs, "MODELS SPAWNED CORRECTLY");
     return models;
   }
 
-  /**
-   * @brief For each model located in ENV_DIR, inserts a random number of it in 
-   * random position (fixed orientation) and scale 
-   * 
-   * @return Vector with the names of the inserted models
-   */
-  std::vector<std::string> DatasetGenerator::SpawnRandomEnviroment()
+  /////////////////////////////////
+  std::vector<std::string> 
+  DatasetGenerator::SpawnRandomEnviroment()
   {
     ROS_INFO_COND(this->debug_msgs, "SPAWNING ENVIROMENT...");
 
@@ -536,12 +528,12 @@ namespace gazebo
     
     for (const fs::directory_entry &entry : fs::directory_iterator(this->ENV_DIR))
     {
+      fs::path original_file = entry.path() / "model.sdf";
       int num_models_ = ignition::math::Rand::IntUniform(3, 7);
-      fs::path temp_file = GetTemporarySDFfile(entry.path() / "model.sdf");
 
       for (int i = 0; i < num_models_; i++)
       {
-        temp_file = this->ResetTemporarySDFfile(entry.path() / "model.sdf");
+        fs::path temp_file = GetTemporarySDFfile(original_file);
         sdf::SDFPtr temp_sdfFile = this->GetSDFfile(temp_file);
         sdf::ElementPtr modelElement = temp_sdfFile->Root()->GetElement("model");
 
@@ -553,6 +545,7 @@ namespace gazebo
 
         ROS_INFO_COND(this->debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
         this->world->InsertModelSDF(*temp_sdfFile);
+        boost::this_thread::sleep(boost::posix_time::milliseconds(10));
       }
     }
     ROS_INFO_COND(this->debug_msgs, "ENVIROMENT SPAWNED CORRECTLY");
@@ -592,8 +585,6 @@ namespace gazebo
       this->world->RemoveModel(name);
     }
     this->world->SetPaused(false);
-
-    ROS_INFO_COND(this->debug_msgs, "MODELS DELETED CORRECTLY");
   }
 
   /////////////////////////////////
@@ -763,7 +754,7 @@ namespace gazebo
     std::cout << YELLOW << "IMAGES OUTPUT DIR: " << RESET << "\n " << this->images_dir.c_str() << std::endl;
   }
 
-  /////////////////////////////////
+  /// @brief Get last saved cloud count and continue from that number
   void DatasetGenerator::ResumeEnvCount()
   {
     fs::directory_entry last_entry;
@@ -801,9 +792,10 @@ namespace gazebo
   }
 
   /**
-   * @brief Check if sensor is currently working in Gazebo.
-   * @return true if sensor is working.
-   */
+   * @brief Check if the sensor is ready. It tries to get a model with name saved in "sensor_name"
+   * @return true if the sensor is ready
+   * 
+  */
   bool DatasetGenerator::SensorReady()
   {
     ROS_INFO_COND(this->debug_msgs, "CHECKING IF OUSTER IS READY");
@@ -822,12 +814,19 @@ namespace gazebo
   {
     ROS_INFO_COND(this->debug_msgs, "CHECKING SPAWNED MODELS");
 
+    int spawned_models = 0;
     for(auto model_name : model_names)
     {
       if(!this->world->ModelByName(model_name))
+      { 
+        ROS_INFO_COND(this->debug_msgs, YELLOW "CAN'T FIND MODEL: %s" RESET, model_name.c_str());
+        ROS_INFO_COND(this->debug_msgs, YELLOW "FOUND MODELS: %d" RESET, (int) spawned_models);
         return false;
+      }
+      spawned_models++;
     }
-    ROS_INFO_COND(this->debug_msgs, "MODELS SPAWNED CORRECTLY");
+    ROS_INFO_COND(this->debug_msgs, YELLOW "FOUND MODELS: %d" RESET, (int) spawned_models);
+    ROS_INFO_COND(this->debug_msgs, GREEN "MODELS SPAWNED CORRECTLY" RESET);
 
     return true;
   }
@@ -839,9 +838,12 @@ namespace gazebo
     for(auto model_name : model_names)
     {
       if(this->world->ModelByName(model_name))
+      {
+        ROS_INFO_COND(this->debug_msgs, YELLOW "MODEL STILL REMAINING: %s" RESET, model_name.c_str());
         return false;
+      }
     }
-    ROS_INFO_COND(this->debug_msgs, "MODELS DELETED CORRECTLY");
+    ROS_INFO_COND(this->debug_msgs, GREEN "MODELS DELETED CORRECTLY" RESET);
     return true;
   }
 
