@@ -62,7 +62,7 @@ namespace gazebo
     this->pcl_cloud.reset(new PointCloud);
     this->take_screenshot = false;
     this->laser_retro = 1;
-    this->config.sim.paused = true
+    this->config.simulation.paused = true;
   }
 
   /////////////////////////////////
@@ -74,7 +74,7 @@ namespace gazebo
     this->pcl_cloud.reset(new PointCloud);
     this->take_screenshot = false;
     this->laser_retro = 1;
-    this->config.sim.paused = true;
+    this->config.simulation.paused = true;
   }
 
 
@@ -137,10 +137,9 @@ namespace gazebo
     std::vector<std::string> all_models_;
 
     int estado = 0;
-    int env_count_ = 0;
     gazebo::common::Console::SetQuiet(true);
 
-    while (this->env_count < this->NUM_ENV)
+    while (this->env_count < this->config.out_data.quantity)
     {
       switch (estado)
       {
@@ -164,7 +163,7 @@ namespace gazebo
         all_models_.resize(env_models_.size() + models_.size());
 	      std::set_union(env_models_.begin(), env_models_.end(), models_.begin(), models_.end(), all_models_.begin());
 
-        ROS_INFO_COND(this->debug_msgs, BLUE "MODELS SPAWNED: %d" RESET, (int) all_models_.size());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, BLUE "MODELS SPAWNED: %d" RESET, (int) all_models_.size());
 
         estado = 2;
         break;
@@ -172,7 +171,7 @@ namespace gazebo
       case 2:
         if (this->CheckSpawnedModels(all_models_))
         {
-          if(this->paused)
+          if(this->config.simulation.paused)
           {
             ROS_INFO(YELLOW "PAUSED: Press enter to continue ..." RESET);
             std::getchar();
@@ -182,9 +181,14 @@ namespace gazebo
         break;
       
       case 3:
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        // this->TakeScreenShot();
-        this->SavePointCloud();
+        std::this_thread::sleep_for(std::chrono::milliseconds(this->config.simulation.data_capture_delay));
+
+        if(this->config.camera.enable)
+          this->TakeScreenShot();  
+
+        if(this->config.out_data.enable)  
+          this->SavePointCloud();
+        
         this->removeModelsByName(all_models_);
         estado = 4;
         break;
@@ -208,7 +212,7 @@ namespace gazebo
 
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(this->config.simulation.iteration_delay));
     }
     ROS_INFO(GREEN "ENVS CREATED CORRECTLY" RESET);
 
@@ -258,11 +262,11 @@ namespace gazebo
 
   //   // WORLD MODEL NAME
   //   if (!sdf->HasElement("grnd_model")) {
-  //     this->ground_model_name = this->config["plugin"]["ground_model_name"].as<std::string>();
+  //     this->world_name = this->config["plugin"]["ground_model_name"].as<std::string>();
   //   } else {
-  //     this->ground_model_name = sdf->GetElement("grnd_model")->Get<std::string>("name");
+  //     this->world_name = sdf->GetElement("grnd_model")->Get<std::string>("name");
   //   }
-  //   std::cout << YELLOW << "WORLD MODEL NAME: " << RESET << "\n " << this->ground_model_name.c_str() << std::endl;
+  //   std::cout << YELLOW << "WORLD MODEL NAME: " << RESET << "\n " << this->world_name.c_str() << std::endl;
 
   //   // SENSOR MODEL NAME
   //   if (!sdf->HasElement("sensor_name")) {
@@ -354,22 +358,22 @@ namespace gazebo
   //   }
   //   std::cout << YELLOW << "CLOUD BINARY FORMAT: " << RESET << "\n " << this->pc_binary << std::endl;
 
-    // PLOT EXTRA INFORMATION MESSAVES OVER THE TERMINAL
-    if (!sdf->HasElement("debug_msgs")) {
-      this->debug_msgs = this->config["plugin"]["debug_msgs"].as<bool>();
-    } else {
-      this->debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
-    }
-      std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
+  //   // PLOT EXTRA INFORMATION MESSAVES OVER THE TERMINAL
+  //   if (!sdf->HasElement("debug_msgs")) {
+  //     this->config.simulation.debug_msgs = this->config["plugin"]["debug_msgs"].as<bool>();
+  //   } else {
+  //     this->config.simulation.debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
+  //   }
+  //     std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->config.simulation.debug_msgs << std::endl;
 
-    // PAUSES THE PROGRAM UNTIL USER PRESS ENTER
-    if (!sdf->HasElement("paused")) {
-      this->paused = this->config["plugin"]["paused"].as<bool>();
-    } else {
-      this->paused = sdf->GetElement("paused")->Get<bool>();
-    }
-      std::cout << YELLOW << "PAUSED MODE: " << RESET << "\n " << this->paused << std::endl;
-  }
+  //   // PAUSES THE PROGRAM UNTIL USER PRESS ENTER
+  //   if (!sdf->HasElement("paused")) {
+  //     this->paused = this->config["plugin"]["paused"].as<bool>();
+  //   } else {
+  //     this->paused = sdf->GetElement("paused")->Get<bool>();
+  //   }
+  //     std::cout << YELLOW << "PAUSED MODE: " << RESET << "\n " << this->paused << std::endl;
+  // }
 
   /////////////////////////////////
   void DatasetGenerator::GetYamlConfig()
@@ -377,7 +381,7 @@ namespace gazebo
     fs::path package_path(ros::package::getPath("arvc_dataset_generator"));
     fs::path config_path = package_path / "config/dataset_generator_config.yaml";
     
-    this->config = arvc::configuration(config_path);
+    this->config = arvc::plugin::configuration(config_path);
     std::cout << YELLOW << "YAML CONFIG PATH: " << RESET << "\n " << config_path.string().c_str() << std::endl;
 
   }
@@ -387,7 +391,7 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::InsertCameraModel()
   {
-    sdf::SDFPtr camera_sdf = this->GetSDFfile(this->cam_path);
+    sdf::SDFPtr camera_sdf = this->GetSDFfile(this->config.camera.path);
     this->world->InsertModelSDF(*camera_sdf);
 
     // GET CAMERA NAME
@@ -404,7 +408,7 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   bool DatasetGenerator::GetCameraPointer()
   {
-    ROS_INFO_COND(this->debug_msgs, YELLOW "TRYING TO GET CAMERA: %s" RESET, this->cam_name.c_str());
+    ROS_INFO_COND(this->config.simulation.debug_msgs, YELLOW "TRYING TO GET CAMERA: %s" RESET, this->cam_name.c_str());
     sensors::SensorPtr sensor = sensors::get_sensor(this->cam_name);
 
     if(!sensor)
@@ -423,11 +427,11 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::TakeScreenShot()
   {
-    ROS_INFO_COND(this->debug_msgs, "TAKING SCREENSHOT");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "TAKING SCREENSHOT");
 
     std::stringstream ss;
     ss.str("");
-    ss << this->images_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".jpg";
+    ss << this->img_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".jpg";
     
     this->camera->Update(true);
     this->camera->SaveFrame(ss.str().c_str());
@@ -455,9 +459,9 @@ namespace gazebo
   }
 
   /////////////////////////////////
-  fs::path DatasetGenerator::GetTemporarySDFfile(fs::path path)
+  fs::path DatasetGenerator::GetTemporarySDFfile(fs::path orig_path)
   {
-    ROS_INFO_COND(this->debug_msgs, "GENERATING TEMPORARY SDF FILE");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "GENERATING TEMPORARY SDF FILE");
 
     fs::path new_model_path = orig_path.parent_path() / "temp_model.sdf";
     fs::path new_config_path = orig_path.parent_path() / "temp_model.config";
@@ -474,7 +478,7 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   fs::path DatasetGenerator::ResetTemporarySDFfile(fs::path orig_path)
   {
-    ROS_INFO_COND(this->debug_msgs, "RESETING TEMPORARY SDF FILE");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "RESETING TEMPORARY SDF FILE");
 
     fs::path new_path;
 
@@ -485,43 +489,54 @@ namespace gazebo
   std::vector<std::string> 
   DatasetGenerator::SpawnRandomModels()
   {
-    ROS_INFO_COND(this->debug_msgs, "SPAWNING MODELS...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING MODELS...");
 
     std::vector<std::string> models;
     std::string model_name;
-
-    for (const fs::directory_entry &entry : fs::directory_iterator(this->models_dir))
+    
+    for (int i=0; i < this->config.labeled.num_lbld_models; i++)
     {
-      fs::path original_file = entry.path() / "model.sdf";
-      this->laser_retro = 1;
+      arvc::plugin::model_base actual_model = this->config.labeled.model[i];
+      fs::path original_file = actual_model.path / "model.sdf";
 
-      for (int i = 0; i < this->NUM_MODELS; i++)
+      for (int j=0; i < actual_model.num_models; j++)
       {
-        fs::path temp_file = this->GetTemporarySDFfile(original_file);
-        sdf::SDFPtr temp_sdfFile = this->GetSDFfile(temp_file);
-        sdf::ElementPtr modelElement = temp_sdfFile->Root()->GetElement("model");
-
-        model_name = this->SetModelName(modelElement, i);
-        this->SetRandomScale(modelElement);
-        this->SetLaserRetro(modelElement);
-        this->SetModelPose(modelElement);
-
-        models.push_back(model_name);
-
-        ROS_INFO_COND(this->debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
-        this->world->InsertModelSDF(*temp_sdfFile);
-        boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+        InsertModel(actual_model, j);
       }
+      
     }
-    ROS_INFO_COND(this->debug_msgs, "MODELS SPAWNED CORRECTLY");
+
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "MODELS SPAWNED CORRECTLY");
     return models;
   }
+
+  void 
+  DatasetGenerator::InsertModel(arvc::plugin::model_base _model, int _model_index)
+  {
+
+    fs::path temp_file = this->GetTemporarySDFfile(original_file);
+    sdf::SDFPtr temp_sdfFile = this->GetSDFfile(temp_file);
+    sdf::ElementPtr modelElement = temp_sdfFile->Root()->GetElement("model");
+
+    model_name = this->SetModelName(modelElement, _model.name, _model_index);
+    this->SetRandomScale(modelElement, );
+    this->SetLaserRetro(modelElement);
+    this->SetModelPose(modelElement);
+
+    models.push_back(model_name);
+
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
+    this->world->InsertModelSDF(*temp_sdfFile);
+    boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+  }
+
+
 
   /////////////////////////////////
   std::vector<std::string> 
   DatasetGenerator::SpawnRandomEnviroment()
   {
-    ROS_INFO_COND(this->debug_msgs, "SPAWNING ENVIROMENT...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING ENVIROMENT...");
 
     std::vector<std::string> models;
     std::string model_name;
@@ -543,19 +558,19 @@ namespace gazebo
         this->SetModelPosition(modelElement);
         this->SetRandomMeshScale(modelElement);
 
-        ROS_INFO_COND(this->debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
         this->world->InsertModelSDF(*temp_sdfFile);
         boost::this_thread::sleep(boost::posix_time::milliseconds(10));
       }
     }
-    ROS_INFO_COND(this->debug_msgs, "ENVIROMENT SPAWNED CORRECTLY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "ENVIROMENT SPAWNED CORRECTLY");
     return models;
   }
   
   /////////////////////////////////
   void DatasetGenerator::removeModels()
   {
-    ROS_INFO_COND(this->debug_msgs, "DELETING MODELS...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODELS...");
 
     this->world->SetPaused(true);
 
@@ -564,9 +579,9 @@ namespace gazebo
     for(const auto &model_ : actual_models_)
     {
       std::string name = model_->GetName();
-      if(name != this->sensor_name && name != this->ground_model_name && name != this->cam_name)
+      if(name != this->sensor_name && name != this->world_name && name != this->cam_name)
       {
-        ROS_INFO_COND(this->debug_msgs, "DELETING MODEL: %s", name.c_str());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODEL: %s", name.c_str());
         this->world->RemoveModel(name);
       }
     }   
@@ -576,25 +591,25 @@ namespace gazebo
   /////////////////////////////////
   void DatasetGenerator::removeModelsByName(std::vector<std::string> models)
   {
-    ROS_INFO_COND(this->debug_msgs, "DELETING MODELS...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODELS...");
 
     this->world->SetPaused(true);
     for(const std::string &name : models)
     {
-      ROS_INFO_COND(this->debug_msgs, "DELETING MODEL: %s", name.c_str());
+      ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODEL: %s", name.c_str());
       this->world->RemoveModel(name);
     }
     this->world->SetPaused(false);
   }
 
   /////////////////////////////////
-  std::string DatasetGenerator::SetModelName(sdf::ElementPtr modelElement, int cnt)
+  std::string DatasetGenerator::SetModelName(sdf::ElementPtr modelElement, std::string _model_name, int cnt)
   {
-    std::string base_name =  modelElement->Get<std::string>("name");
+    // std::string base_name =  modelElement->Get<std::string>("name");
 
     std::stringstream ss;
     ss.str("");
-    ss << base_name << '_' << cnt;
+    ss << _model_name << '_' << cnt;
 
     std::string model_name = ss.str();
 
@@ -631,11 +646,11 @@ namespace gazebo
   }
  
   /////////////////////////////////
-  void DatasetGenerator::SetRandomScale(sdf::ElementPtr model)
+  void DatasetGenerator::SetRandomScale(sdf::ElementPtr model, Eigen::Vector3f _min_scale, Eigen::Vector3f _max_scale)
   {
     using namespace ignition::math;
 
-    Vector3d scale = this->ComputeRandomScale();
+    Vector3d scale = this->ComputeRandomScale(Eigen::Vector3f _min_scale, Eigen::Vector3f _max_scale);
 
     sdf::ElementPtr linkElement = model->GetElement("link");
     sdf::ElementPtr visualElement = linkElement->GetElement("visual");
@@ -723,8 +738,8 @@ namespace gazebo
   /// @brief Moves groud model randomly
   void DatasetGenerator::MoveGroundModel()
   {
-    ROS_INFO_COND(this->debug_msgs, "MOVING GROUND MODEL");
-    physics::ModelPtr world_model = this->world->ModelByName(this->ground_model_name);
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "MOVING GROUND MODEL");
+    physics::ModelPtr world_model = this->world->ModelByName(this->world_name);
     ignition::math::Pose3d pose = this->ComputeWorldRandomPose();
     
     // To use SetWorldPose is recommendable pause the world
@@ -738,20 +753,20 @@ namespace gazebo
   /////////////////////////////////
   void DatasetGenerator::CheckOutputDirs()
   {
-    this->pcd_dir = this->output_dir / "pcd";
-    this->images_dir = this->output_dir / "images";
+    this->pcd_dir = this->config.out_data.out_dir / "pcd";
+    this->img_dir = this->config.out_data.out_dir / "images";
 
-    if(!fs::exists(this->output_dir))
-      fs::create_directory(this->output_dir);    
+    if(!fs::exists(this->config.out_data.out_dir))
+      fs::create_directory(this->config.out_data.out_dir);    
 
     if(!fs::exists(this->pcd_dir))
       fs::create_directory(this->pcd_dir);
 
-    if(!fs::exists(this->images_dir))
-      fs::create_directory(this->images_dir);
+    if(!fs::exists(this->img_dir))
+      fs::create_directory(this->img_dir);
 
     std::cout << YELLOW << "PCD OUTPUT DIR: " << RESET << "\n " << this->pcd_dir.c_str() << std::endl;
-    std::cout << YELLOW << "IMAGES OUTPUT DIR: " << RESET << "\n " << this->images_dir.c_str() << std::endl;
+    std::cout << YELLOW << "IMAGES OUTPUT DIR: " << RESET << "\n " << this->img_dir.c_str() << std::endl;
   }
 
   /// @brief Get last saved cloud count and continue from that number
@@ -798,7 +813,7 @@ namespace gazebo
   */
   bool DatasetGenerator::SensorReady()
   {
-    ROS_INFO_COND(this->debug_msgs, "CHECKING IF OUSTER IS READY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "CHECKING IF OUSTER IS READY");
     if(!this->world->ModelByName(this->sensor_name))
       return false;
     else
@@ -812,21 +827,21 @@ namespace gazebo
   /////////////////////////////////
   bool DatasetGenerator::CheckSpawnedModels(std::vector<std::string> model_names)
   {
-    ROS_INFO_COND(this->debug_msgs, "CHECKING SPAWNED MODELS");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "CHECKING SPAWNED MODELS");
 
     int spawned_models = 0;
     for(auto model_name : model_names)
     {
       if(!this->world->ModelByName(model_name))
       { 
-        ROS_INFO_COND(this->debug_msgs, YELLOW "CAN'T FIND MODEL: %s" RESET, model_name.c_str());
-        ROS_INFO_COND(this->debug_msgs, YELLOW "FOUND MODELS: %d" RESET, (int) spawned_models);
+        ROS_INFO_COND(this->config.simulation.debug_msgs, YELLOW "CAN'T FIND MODEL: %s" RESET, model_name.c_str());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, YELLOW "FOUND MODELS: %d" RESET, (int) spawned_models);
         return false;
       }
       spawned_models++;
     }
-    ROS_INFO_COND(this->debug_msgs, YELLOW "FOUND MODELS: %d" RESET, (int) spawned_models);
-    ROS_INFO_COND(this->debug_msgs, GREEN "MODELS SPAWNED CORRECTLY" RESET);
+    ROS_INFO_COND(this->config.simulation.debug_msgs, YELLOW "FOUND MODELS: %d" RESET, (int) spawned_models);
+    ROS_INFO_COND(this->config.simulation.debug_msgs, GREEN "MODELS SPAWNED CORRECTLY" RESET);
 
     return true;
   }
@@ -834,16 +849,16 @@ namespace gazebo
   /////////////////////////////////
   bool DatasetGenerator::CheckDeletedModels(std::vector<std::string> model_names)
   {
-    ROS_INFO_COND(this->debug_msgs, "CHECKING DELETE MODELS");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "CHECKING DELETE MODELS");
     for(auto model_name : model_names)
     {
       if(this->world->ModelByName(model_name))
       {
-        ROS_INFO_COND(this->debug_msgs, YELLOW "MODEL STILL REMAINING: %s" RESET, model_name.c_str());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, YELLOW "MODEL STILL REMAINING: %s" RESET, model_name.c_str());
         return false;
       }
     }
-    ROS_INFO_COND(this->debug_msgs, GREEN "MODELS DELETED CORRECTLY" RESET);
+    ROS_INFO_COND(this->config.simulation.debug_msgs, GREEN "MODELS DELETED CORRECTLY" RESET);
     return true;
   }
 
@@ -891,7 +906,7 @@ namespace gazebo
   /////////////////////////////////
   void DatasetGenerator::SavePointCloud()
   {
-    ROS_INFO_COND(this->debug_msgs, "SAVING POINTCLOUD...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "SAVING POINTCLOUD...");
     pcl::PCDWriter writer;
     std::stringstream ss;
     ss.str("");

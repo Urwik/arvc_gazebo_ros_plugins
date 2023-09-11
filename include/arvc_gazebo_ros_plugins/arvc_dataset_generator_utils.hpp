@@ -17,11 +17,12 @@ using namespace std;
 
 namespace arvc{
 
+namespace plugin{
     class model_base
     {
     public:
         string name;
-        string path;
+        fs::path path;
         int num_models;
         string rand_mode;
         Eigen::Vector3f min_scale;
@@ -38,10 +39,13 @@ namespace arvc{
     class configuration
     {
         public:
+        configuration(){
+        }
+
         configuration(filesystem::path config_path){
             parse_config(config_path);
             environment env(this->num_env_models);
-            labeled lab(this->num_lbld_models);
+            labeled labeled(this->num_lbld_models);
         }
 
         class simulation
@@ -52,17 +56,23 @@ namespace arvc{
                 this->paused = true;
                 this->debug_msgs = true;
                 this->log_msgs = true;
+                this->iteration_delay = 100;
+                this->data_capture_delay = 1000;
             }
 
             ~simulation(){
                 this->paused = false;
                 this->debug_msgs = false;
                 this->log_msgs = false;
+                this->iteration_delay = 0;
+                this->data_capture_delay = 0;
             }
 
             bool paused;
             bool debug_msgs;
             bool log_msgs;
+            int iteration_delay; // ms
+            int data_capture_delay; // ms
         };
 
         class environment
@@ -111,13 +121,13 @@ namespace arvc{
                 this->enable = true;
                 this->name = "simulated_sensor";
                 this->topic = "/sim_sensor/data";
-                this->path = "/media/arvc/data/datasets/New_Dataset";
+                this->path = fs::path("/media/arvc/data/datasets/New_Dataset");
             }
 
             bool enable;
             string name;
             string topic;
-            string path;
+            fs::path path;
         };
 
 
@@ -128,13 +138,13 @@ namespace arvc{
                 this->enable = true;
                 this->name = "camera";
                 this->topic = "/sim_camera";
-                this->path = "/media/arvc/data/datasets/New_Dataset";
+                this->path = fs::path("/media/arvc/data/datasets/New_Dataset");
             }
 
             bool enable;
             string name;
             string topic;
-            string path;
+            fs::path path;
         };
 
 
@@ -143,7 +153,7 @@ namespace arvc{
             public:
             output_data(){
                 this->enable = true;
-                this->out_dir = "/media/arvc/data/datasets/New_Dataset";
+                this->out_dir = fs::path("/media/arvc/data/datasets/New_Dataset");
                 this->quantity = 1000;
                 this->pc_binary = true;
             }
@@ -156,7 +166,7 @@ namespace arvc{
             }
 
             bool enable;
-            string out_dir;
+            fs::path out_dir;
             int quantity;
             bool pc_binary;
         };
@@ -164,12 +174,12 @@ namespace arvc{
         
         YAML::Node config;
 
-        configuration::simulation sim;
-        configuration::sensor sensors;
-        configuration::camera cameras;
+        configuration::simulation simulation;
+        configuration::sensor sensor;
+        configuration::camera camera;
         configuration::output_data out_data;
         configuration::environment env;
-        configuration::labeled lab;
+        configuration::labeled labeled;
 
         int num_env_models;
         int num_lbld_models;
@@ -184,21 +194,21 @@ namespace arvc{
             this->config = YAML::LoadFile(config_path.string().c_str());
 
             // SIMULATION
-            this->sim.paused = config["simulation"]["paused"].as<bool>();
-            this->sim.debug_msgs = config["simulation"]["debug_msgs"].as<bool>();
-            this->sim.log_msgs = config["simulation"]["log_msgs"].as<bool>();
+            this->simulation.paused = config["simulation"]["paused"].as<bool>();
+            this->simulation.debug_msgs = config["simulation"]["debug_msgs"].as<bool>();
+            this->simulation.log_msgs = config["simulation"]["log_msgs"].as<bool>();
 
             // SENSORS
-            this->sensors.enable = config["sensors"]["enable"].as<bool>();
-            this->sensors.name = config["sensors"]["name"].as<string>();
-            this->sensors.topic = config["sensors"]["topic"].as<string>();
-            this->sensors.path = config["sensors"]["path"].as<string>();
+            this->sensor.enable = config["sensors"]["enable"].as<bool>();
+            this->sensor.name = config["sensors"]["name"].as<string>();
+            this->sensor.topic = config["sensors"]["topic"].as<string>();
+            this->sensor.path = config["sensors"]["path"].as<string>();
 
             // CAMERAS
-            this->cameras.enable = config["cameras"]["enable"].as<bool>();
-            this->cameras.name = config["cameras"]["name"].as<string>();
-            this->cameras.topic = config["cameras"]["topic"].as<string>();
-            this->cameras.path = config["cameras"]["path"].as<string>();
+            this->camera.enable = config["cameras"]["enable"].as<bool>();
+            this->camera.name = config["cameras"]["name"].as<string>();
+            this->camera.topic = config["cameras"]["topic"].as<string>();
+            this->camera.path = config["cameras"]["path"].as<string>();
 
             // OUTPUT DATA
             this->out_data.enable = config["output_data"]["enable"].as<bool>();
@@ -228,27 +238,27 @@ namespace arvc{
             }
                 
             // LABELED
-            this->lab.insert_models = config["labeled"]["insert_models"].as<bool>();
-            this->lab.dynamic_models = config["labeled"]["dynamic_models"].as<bool>();
-            this->lab.num_lbld_models = sizeof(this->lab.model) / sizeof(configuration::labeled::model);
+            this->labeled.insert_models = config["labeled"]["insert_models"].as<bool>();
+            this->labeled.dynamic_models = config["labeled"]["dynamic_models"].as<bool>();
+            this->labeled.num_lbld_models = sizeof(this->labeled.model) / sizeof(configuration::labeled::model);
 
-            for (int i = 0 ; i <  this->lab.num_lbld_models ; i++)
+            for (int i = 0 ; i <  this->labeled.num_lbld_models ; i++)
             {
-                this->lab.model[i].name = config["labeled"]["model"][i]["name"].as<string>();
-                this->lab.model[i].path = config["labeled"]["model"][i]["path"].as<string>();
-                this->lab.model[i].num_models = config["labeled"]["model"][i]["num_models"].as<int>();
-                this->lab.model[i].rand_mode = config["labeled"]["model"][i]["rand_mode"].as<string>();
-                this->lab.model[i].min_scale = config["labeled"]["model"][i]["min_scale"].as<Eigen::Vector3f>();
-                this->lab.model[i].max_scale = config["labeled"]["model"][i]["max_scale"].as<Eigen::Vector3f>();
-                this->lab.model[i].negative_offset = config["labeled"]["model"][i]["negative_offset"].as<Eigen::Vector3f>();
-                this->lab.model[i].positive_offset = config["labeled"]["model"][i]["positive_offset"].as<Eigen::Vector3f>();
-                this->lab.model[i].positive_dist = config["labeled"]["model"][i]["positive_dist"].as<Eigen::Vector3f>();
-                this->lab.model[i].negative_dist = config["labeled"]["model"][i]["negative_dist"].as<Eigen::Vector3f>();
-                this->lab.model[i].rotation_range = config["labeled"]["model"][i]["rotation_range"].as<Eigen::Vector3f>();
+                this->labeled.model[i].name = config["labeled"]["model"][i]["name"].as<string>();
+                this->labeled.model[i].path = config["labeled"]["model"][i]["path"].as<string>();
+                this->labeled.model[i].num_models = config["labeled"]["model"][i]["num_models"].as<int>();
+                this->labeled.model[i].rand_mode = config["labeled"]["model"][i]["rand_mode"].as<string>();
+                this->labeled.model[i].min_scale = config["labeled"]["model"][i]["min_scale"].as<Eigen::Vector3f>();
+                this->labeled.model[i].max_scale = config["labeled"]["model"][i]["max_scale"].as<Eigen::Vector3f>();
+                this->labeled.model[i].negative_offset = config["labeled"]["model"][i]["negative_offset"].as<Eigen::Vector3f>();
+                this->labeled.model[i].positive_offset = config["labeled"]["model"][i]["positive_offset"].as<Eigen::Vector3f>();
+                this->labeled.model[i].positive_dist = config["labeled"]["model"][i]["positive_dist"].as<Eigen::Vector3f>();
+                this->labeled.model[i].negative_dist = config["labeled"]["model"][i]["negative_dist"].as<Eigen::Vector3f>();
+                this->labeled.model[i].rotation_range = config["labeled"]["model"][i]["rotation_range"].as<Eigen::Vector3f>();
             }
         }
 
     };
 
-
+}
 }

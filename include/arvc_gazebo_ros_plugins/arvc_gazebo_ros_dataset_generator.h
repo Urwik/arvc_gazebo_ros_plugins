@@ -23,6 +23,7 @@
 #include <pcl/point_types.h>
 
 #include "arvc_gazebo_ros_plugins/arvc_dataset_generator_utils.hpp"
+#include "arvc_gazebo_ros_plugins/arvc_dataset_generator_utils.hpp"
 
 namespace gazebo
 {
@@ -101,6 +102,9 @@ namespace gazebo
      */
     private: std::filesystem::path ResetTemporarySDFfile(std::filesystem::path sdfPath);
 
+
+    private: void InsertModel(arvc::plugin::model_base _model, int _model_index);
+
     /// @brief Insert labeled cuboid models in random scales and poses
     private: std::vector<std::string> SpawnRandomModels();
 
@@ -122,7 +126,7 @@ namespace gazebo
      * @param modelElement sdf::ElementPtr to the model element.
      * @param cnt number of the spawned model
      */
-    public: std::string SetModelName(sdf::ElementPtr modelElement, int count);
+    public: std::string SetModelName(sdf::ElementPtr modelElement, std::string _model_name, int count);
 
     /**
      * @brief Set random pose to a model.
@@ -131,16 +135,10 @@ namespace gazebo
     private: void SetModelPose(sdf::ElementPtr modelElement);
 
     /**
-     * @brief Set random position to a model.
+     * Set random scale of a model in all its axes.
      * @param modelElement sdf::ElementPtr to the model element.
      */
-    private: void SetModelPosition(sdf::ElementPtr modelElement);
-
-    /**
-     * @brief Set random scale to a model in all its axes.
-     * @param modelElement sdf::ElementPtr to the model element.
-     */
-    private: void SetRandomScale(sdf::ElementPtr model);
+    private: void SetRandomScale(sdf::ElementPtr model, Eigen::Vector3f _min_scale, Eigen::Vector3f _max_scale);
 
     /**
      * @brief Set random scale in 3 axis to a model.
@@ -301,29 +299,7 @@ namespace gazebo
     
 
     // CONFIGURATION
-    private: arvc::configuration config;
-    private: std::string RANDMODE;
-    private: int NUM_ENV;
-    private: int NUM_MODELS;
-    private: std::filesystem::path ENV_DIR;
-    private: std::filesystem::path models_dir;
-    private: std::filesystem::path output_dir;
-    private: std::filesystem::path pcd_dir;
-    private: std::filesystem::path images_dir;
-    private: std::filesystem::path cam_path;
-    private: std::string sensor_name;
-    private: std::string sensor_topic;
-    private: std::string ground_model_name;
-    private: ignition::math::Vector3d pos_offset;
-    private: ignition::math::Vector3d neg_offset;
-    private: ignition::math::Vector3d pos_dist;
-    private: ignition::math::Vector3d neg_dist;
-    private: ignition::math::Vector3d min_scale;
-    private: ignition::math::Vector3d max_scale;
-    private: ignition::math::Vector3d rot_range;
-    private: bool debug_msgs;
-    private: bool pc_binary;
-    private: float sensor_offset;
+    private: arvc::plugin::configuration config;
 
     //ROS
     private: ros::NodeHandle* ros_node;
@@ -332,18 +308,19 @@ namespace gazebo
     private: ros::CallbackQueue ros_cbqueue;
     private: boost::thread callback_queue_thread;
 
+    // DIRECTORIES
+    private: fs::path pcd_dir;
+    private: fs::path img_dir;
 
     //PCL
     private: pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud;
 
     // HELPERS
-    private: bool debug_msgs;
     private: bool ousterReady;
     private: bool handle_to_cam;
     private: bool take_screenshot;
     private: int env_count;
     private: int laser_retro;
-    private: bool paused;
     private: boost::thread generator_thread;
   };
 }
