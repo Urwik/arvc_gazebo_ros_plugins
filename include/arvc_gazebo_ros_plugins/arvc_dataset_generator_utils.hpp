@@ -1,12 +1,15 @@
+#pragma once
 #include <iostream>
-#include <eigen3/Eigen/Dense>
-
+#include <ignition/math/Vector3.hh>
+#include <ignition/math/Pose3.hh>
 
 #include <filesystem>
 #include <ros/package.h>
 #include <yaml-cpp/yaml.h>
 
 using namespace std;
+namespace fs = std::filesystem;
+namespace im = ignition::math;
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
@@ -21,20 +24,24 @@ namespace plugin{
     class model_base
     {
     public:
+        model_base()
+        {    
+        }
+        ~model_base()
+        {
+        }
         string name;
         fs::path path;
         int num_models;
         string rand_mode;
-        Eigen::Vector3f min_scale;
-        Eigen::Vector3f max_scale;
-        Eigen::Vector3f negative_offset;
-        Eigen::Vector3f positive_offset;
-        Eigen::Vector3f positive_dist;
-        Eigen::Vector3f negative_dist;
-        Eigen::Vector3f rotation_range;
-        
+        im::Vector3d min_scale;
+        im::Vector3d max_scale;
+        im::Vector3d negative_offset;
+        im::Vector3d positive_offset;
+        im::Vector3d positive_dist;
+        im::Vector3d negative_dist;
+        im::Vector3d rotation_range;
     };
-
 
     class configuration
     {
@@ -44,8 +51,16 @@ namespace plugin{
 
         configuration(filesystem::path config_path){
             parse_config(config_path);
-            environment env(this->num_env_models);
-            labeled labeled(this->num_lbld_models);
+
+            cout << YELLOW <<"Carga el archivo de configuración" << RESET << endl;
+            cout << "Numero de environment models: " << this->num_env_models   << endl;
+            cout << "Numero de labeled models: " << this->num_lbld_models  << endl;
+
+            // environment env(this->num_env_models);
+            // cout << "Pasa la instanciación de Environment" << endl;
+            // labeled lab_mod(this->num_lbld_models);
+            // cout << "Pasa la instanciación de Labeled" << endl;
+
         }
 
         class simulation
@@ -68,6 +83,15 @@ namespace plugin{
                 this->data_capture_delay = 0;
             }
 
+            friend std::ostream& operator<<(std::ostream& os, const configuration::simulation& obj)
+            {
+                os << GREEN << "---- SIMULATION ----" << RESET << '\n';
+                os << "Paused: " <<  boolalpha  << obj.paused << '\n';
+                os << "Debug: " <<  boolalpha  << obj.debug_msgs << '\n';
+                os << "Log: "   <<  boolalpha  << obj.log_msgs << '\n';
+                return os;
+            }
+            
             bool paused;
             bool debug_msgs;
             bool log_msgs;
@@ -75,53 +99,31 @@ namespace plugin{
             int data_capture_delay; // ms
         };
 
-        class environment
-        {
-            public:
-            environment(){}
-
-            environment(int arg){
-                model_base model[arg];
-            }
-
-            int num_env_models;   
-            string world_name;
-            bool insert_models;
-            bool dynamic_models;
-            model_base model[5];
-        };
-
-
-        class labeled
-        {
-            public:
-            labeled(){}
-
-            labeled(int arg){
-                model_base model[arg];   
-            }
-
-            ~labeled(){
-                this->num_lbld_models = 0;
-                this->insert_models = false;
-                this->dynamic_models = false;
-            }
-
-            int num_lbld_models;
-            bool insert_models;
-            bool dynamic_models;
-            model_base model[5];   
-        };
-
-
         class sensor
         {
             public:
             sensor(){
                 this->enable = true;
-                this->name = "simulated_sensor";
-                this->topic = "/sim_sensor/data";
-                this->path = fs::path("/media/arvc/data/datasets/New_Dataset");
+                this->name = "";
+                this->topic = "";
+                this->path = fs::path("");
+            }
+
+            ~sensor(){
+                this->enable = false;
+                this->name = "";
+                this->topic = "";
+                this->path = "";
+            }
+
+            friend std::ostream& operator<<(std::ostream& os, const sensor& obj)
+            {
+                os << GREEN << "---- SENSOR ----" << RESET << '\n';
+                os << "Enable: " <<  boolalpha  << obj.enable << '\n';
+                os << "Name: " << obj.name << '\n';
+                os << "Topic: " << obj.topic << '\n';
+                os << "Path: "  << obj.path << '\n';
+                return os;
             }
 
             bool enable;
@@ -129,24 +131,38 @@ namespace plugin{
             string topic;
             fs::path path;
         };
-
 
         class camera
         {
             public:
             camera(){
                 this->enable = true;
-                this->name = "camera";
-                this->topic = "/sim_camera";
-                this->path = fs::path("/media/arvc/data/datasets/New_Dataset");
+                this->name = "";
+                this->topic = "/";
+                this->path = fs::path("");
             }
 
+            ~camera(){
+                this->enable = true;
+                this->name = "";
+                this->topic = "/";
+                this->path = fs::path("");
+            }
+
+            friend std::ostream& operator<<(std::ostream& os, const camera& obj)
+            {
+                os << GREEN << "---- CAMERA ----" << RESET << '\n';
+                os << "Enable: " <<  boolalpha  << obj.enable << '\n';
+                os << "Name: " << obj.name << '\n';
+                os << "Topic: " << obj.topic << '\n';
+                os << "Path: "  << obj.path << '\n';
+                return os;
+            }
             bool enable;
             string name;
             string topic;
             fs::path path;
         };
-
 
         class output_data
         {
@@ -165,11 +181,143 @@ namespace plugin{
                 this->pc_binary = false;
             }
 
+            friend std::ostream& operator<<(std::ostream& os, const output_data& obj)
+            {
+                os << GREEN << "---- OUT DATA ----" << RESET << '\n';
+                os << "Enable: " <<  boolalpha  << obj.enable << '\n';
+                os << "Output Dir: " << obj.out_dir << '\n';
+                os << "Quantity: " << obj.quantity << '\n';
+                os << "PC Binary: "  <<  boolalpha << obj.pc_binary << '\n';
+                return os;
+            }
+
             bool enable;
             fs::path out_dir;
             int quantity;
             bool pc_binary;
         };
+
+        class environment
+        {
+            public:
+            environment(){
+                this->num_env_models = 0;
+                this->world_model = "";
+                this->world_name = "";
+                this->insert_models = false;
+                this->dynamic_models = false;
+                this->model = new model_base[1];
+            }
+
+            environment(int arg){
+                this->num_env_models = arg;
+                this->world_model = "";
+                this->world_name = "";
+                this->insert_models = NULL;
+                this->dynamic_models = NULL;
+                this->model = new model_base[arg];
+            }
+
+            ~environment(){
+                this->num_env_models = 0;
+                this->world_model = "";
+                this->world_name = "";
+                this->insert_models = NULL;
+                this->dynamic_models = NULL;
+            }
+
+            int num_env_models;   
+            string world_name;
+            string world_model;
+            bool insert_models;
+            bool dynamic_models;
+            model_base *model;
+
+            friend std::ostream& operator<<(std::ostream& os, const environment& obj)
+            {
+                os << GREEN << "---- ENVIRONMENT ----" << RESET << '\n';
+                os << "Num Environment Models: " << obj.num_env_models << '\n';
+                os << "World Name: "  << obj.world_name << '\n';
+                os << "World Model: "  << obj.world_model << '\n';
+                os << "Insert_models: "  << obj.insert_models << '\n';
+                os << "Dynamic_models: "  << obj.dynamic_models << '\n';
+                os << "Models: "  << '\n';
+                for (int i = 0 ; i < obj.num_env_models ; i++)
+                {
+                    os << '\t' << "Model_" << i << ": "  << obj.model[i].name << '\n';
+                    os << "\t\t" << "Path: " << obj.model[i].path << '\n';
+                    os << "\t\t" << "Num Models: "  << obj.model[i].num_models << '\n';
+                    os << "\t\t" << "Rand Mode: "  << obj.model[i].rand_mode << '\n';
+                    os << "\t\t" << "Min Scale: "  << obj.model[i].min_scale << '\n';
+                    os << "\t\t" << "Max Scale: "  << obj.model[i].max_scale << '\n';
+                    os << "\t\t" << "Negative Offset: "  << obj.model[i].negative_offset << '\n';
+                    os << "\t\t" << "Positive Offset: "  << obj.model[i].positive_offset << '\n';
+                    os << "\t\t" << "Positive Dist: "  << obj.model[i].positive_dist << '\n';
+                    os << "\t\t" << "Negative Dist: "  << obj.model[i].negative_dist << '\n';
+                    os << "\t\t" << "Rotation Range: "  << obj.model[i].rotation_range << '\n';
+                }
+                return os;
+            }
+        };
+
+
+        class labeled
+        {
+            public:
+            labeled(){
+                this->num_lbld_models = 0;
+                this->insert_models = false;
+                this->dynamic_models = false;
+                this->model = new model_base[1];
+            }
+
+            labeled(int arg){
+                this->num_lbld_models = arg;
+                this->insert_models = false;
+                this->dynamic_models = false;
+                this->model = new model_base[arg];
+            }
+
+            ~labeled(){
+                this->num_lbld_models = 0;
+                this->insert_models = false;
+                this->dynamic_models = false;
+            }
+            
+            friend std::ostream& operator<<(std::ostream& os, const labeled& obj)
+            {
+                os << YELLOW << "---- LABELED ----" << RESET << '\n';
+                os << "Num labeled Models: " << obj.num_lbld_models << '\n';
+                os << "Insert_models: "  << obj.insert_models << '\n';
+                os << "Dynamic_models: "  << obj.dynamic_models << '\n';
+                os << "Models: "  << '\n';
+
+                for (int i = 0 ; i < obj.num_lbld_models ; i++)
+                {
+                    os << '\t' << "Model_" << i << ": "  << obj.model[i].name << '\n';
+                    os << "\t\t" << "Path: " << obj.model[i].path << '\n';
+                    os << "\t\t" << "Num Models: "  << obj.model[i].num_models << '\n';
+                    os << "\t\t" << "Rand Mode: "  << obj.model[i].rand_mode << '\n';
+                    os << "\t\t" << "Min Scale: "  << obj.model[i].min_scale << '\n';
+                    os << "\t\t" << "Max Scale: "  << obj.model[i].max_scale << '\n';
+                    os << "\t\t" << "Negative Offset: "  << obj.model[i].negative_offset << '\n';
+                    os << "\t\t" << "Positive Offset: "  << obj.model[i].positive_offset << '\n';
+                    os << "\t\t" << "Positive Dist: "  << obj.model[i].positive_dist << '\n';
+                    os << "\t\t" << "Negative Dist: "  << obj.model[i].negative_dist << '\n';
+                    os << "\t\t" << "Rotation Range: "  << obj.model[i].rotation_range << '\n';
+                }
+                return os;
+            }
+
+
+            int num_lbld_models;
+            bool insert_models;
+            bool dynamic_models;
+            model_base *model;   
+        };
+
+
+
 
         
         YAML::Node config;
@@ -179,7 +327,7 @@ namespace plugin{
         configuration::camera camera;
         configuration::output_data out_data;
         configuration::environment env;
-        configuration::labeled labeled;
+        configuration::labeled lab_mod;
 
         int num_env_models;
         int num_lbld_models;
@@ -187,11 +335,16 @@ namespace plugin{
 
         virtual void parse_config(filesystem::path config_path)
         {
-            namespace fs = std::filesystem;
-            
-
 
             this->config = YAML::LoadFile(config_path.string().c_str());
+            const YAML::Node& model_list = config["environment"]["model"];
+            const YAML::Node& lbld_model_list = config["labeled_models"]["model"];
+
+            this->num_env_models = model_list.size();
+            this->num_lbld_models = lbld_model_list.size();
+
+            this->env = environment(this->num_env_models);
+            this->lab_mod = labeled(this->num_lbld_models);
 
             // SIMULATION
             this->simulation.paused = config["simulation"]["paused"].as<bool>();
@@ -199,28 +352,28 @@ namespace plugin{
             this->simulation.log_msgs = config["simulation"]["log_msgs"].as<bool>();
 
             // SENSORS
-            this->sensor.enable = config["sensors"]["enable"].as<bool>();
-            this->sensor.name = config["sensors"]["name"].as<string>();
-            this->sensor.topic = config["sensors"]["topic"].as<string>();
-            this->sensor.path = config["sensors"]["path"].as<string>();
+            this->sensor.enable = config["sensor"]["enable"].as<bool>();
+            this->sensor.name = config["sensor"]["name"].as<string>();
+            this->sensor.topic = config["sensor"]["topic"].as<string>();
+            this->sensor.path = config["sensor"]["path"].as<string>();
 
             // CAMERAS
-            this->camera.enable = config["cameras"]["enable"].as<bool>();
-            this->camera.name = config["cameras"]["name"].as<string>();
-            this->camera.topic = config["cameras"]["topic"].as<string>();
-            this->camera.path = config["cameras"]["path"].as<string>();
+            this->camera.enable = config["camera"]["enable"].as<bool>();
+            this->camera.name = config["camera"]["name"].as<string>();
+            this->camera.topic = config["camera"]["topic"].as<string>();
+            this->camera.path = config["camera"]["path"].as<string>();
 
             // OUTPUT DATA
-            this->out_data.enable = config["output_data"]["enable"].as<bool>();
-            this->out_data.out_dir = config["output_data"]["out_dir"].as<string>();
-            this->out_data.quantity = config["output_data"]["quantity"].as<int>();
-            this->out_data.pc_binary = config["output_data"]["pc_binary"].as<bool>();
+            this->out_data.enable = config["data"]["enable"].as<bool>();
+            this->out_data.out_dir = config["data"]["out_dir"].as<string>();
+            this->out_data.quantity = config["data"]["quantity"].as<int>();
+            this->out_data.pc_binary = config["data"]["pc_binary"].as<bool>();
 
             // ENVIRONMENT
+            this->env.world_model = config["environment"]["world_model"].as<string>();
             this->env.world_name = config["environment"]["world_name"].as<string>();
             this->env.insert_models = config["environment"]["insert_models"].as<bool>();
             this->env.dynamic_models = config["environment"]["dynamic_models"].as<bool>();
-            this->env.num_env_models = sizeof(this->env.model) / sizeof(configuration::environment::model);
 
             for (int i = 0 ; i < this->env.num_env_models  ; i++)
             {
@@ -228,37 +381,67 @@ namespace plugin{
                 this->env.model[i].path = config["environment"]["model"][i]["path"].as<string>();
                 this->env.model[i].num_models = config["environment"]["model"][i]["num_models"].as<int>();
                 this->env.model[i].rand_mode = config["environment"]["model"][i]["rand_mode"].as<string>();
-                this->env.model[i].min_scale = config["environment"]["model"][i]["min_scale"].as<Eigen::Vector3f>();
-                this->env.model[i].max_scale = config["environment"]["model"][i]["max_scale"].as<Eigen::Vector3f>();
-                this->env.model[i].negative_offset = config["environment"]["model"][i]["negative_offset"].as<Eigen::Vector3f>();
-                this->env.model[i].positive_offset = config["environment"]["model"][i]["positive_offset"].as<Eigen::Vector3f>();
-                this->env.model[i].positive_dist = config["environment"]["model"][i]["positive_dist"].as<Eigen::Vector3f>();
-                this->env.model[i].negative_dist = config["environment"]["model"][i]["negative_dist"].as<Eigen::Vector3f>();
-                this->env.model[i].rotation_range = config["environment"]["model"][i]["rotation_range"].as<Eigen::Vector3f>();
+                this->env.model[i].min_scale = config["environment"]["model"][i]["min_scale"].as<im::Vector3d>();
+                this->env.model[i].max_scale = config["environment"]["model"][i]["max_scale"].as<im::Vector3d>();
+                this->env.model[i].negative_offset = config["environment"]["model"][i]["negative_offset"].as<im::Vector3d>();
+                this->env.model[i].positive_offset = config["environment"]["model"][i]["positive_offset"].as<im::Vector3d>();
+                this->env.model[i].positive_dist = config["environment"]["model"][i]["positive_dist"].as<im::Vector3d>();
+                this->env.model[i].negative_dist = config["environment"]["model"][i]["negative_dist"].as<im::Vector3d>();
+                this->env.model[i].rotation_range = config["environment"]["model"][i]["rotation_range"].as<im::Vector3d>();
             }
                 
             // LABELED
-            this->labeled.insert_models = config["labeled"]["insert_models"].as<bool>();
-            this->labeled.dynamic_models = config["labeled"]["dynamic_models"].as<bool>();
-            this->labeled.num_lbld_models = sizeof(this->labeled.model) / sizeof(configuration::labeled::model);
+            this->lab_mod.insert_models = config["labeled_models"]["insert_models"].as<bool>();
+            this->lab_mod.dynamic_models = config["labeled_models"]["dynamic_models"].as<bool>();
 
-            for (int i = 0 ; i <  this->labeled.num_lbld_models ; i++)
+            for (int i = 0 ; i <  this->lab_mod.num_lbld_models ; i++)
             {
-                this->labeled.model[i].name = config["labeled"]["model"][i]["name"].as<string>();
-                this->labeled.model[i].path = config["labeled"]["model"][i]["path"].as<string>();
-                this->labeled.model[i].num_models = config["labeled"]["model"][i]["num_models"].as<int>();
-                this->labeled.model[i].rand_mode = config["labeled"]["model"][i]["rand_mode"].as<string>();
-                this->labeled.model[i].min_scale = config["labeled"]["model"][i]["min_scale"].as<Eigen::Vector3f>();
-                this->labeled.model[i].max_scale = config["labeled"]["model"][i]["max_scale"].as<Eigen::Vector3f>();
-                this->labeled.model[i].negative_offset = config["labeled"]["model"][i]["negative_offset"].as<Eigen::Vector3f>();
-                this->labeled.model[i].positive_offset = config["labeled"]["model"][i]["positive_offset"].as<Eigen::Vector3f>();
-                this->labeled.model[i].positive_dist = config["labeled"]["model"][i]["positive_dist"].as<Eigen::Vector3f>();
-                this->labeled.model[i].negative_dist = config["labeled"]["model"][i]["negative_dist"].as<Eigen::Vector3f>();
-                this->labeled.model[i].rotation_range = config["labeled"]["model"][i]["rotation_range"].as<Eigen::Vector3f>();
+                this->lab_mod.model[i].name = config["labeled_models"]["model"][i]["name"].as<string>();
+                this->lab_mod.model[i].path = config["labeled_models"]["model"][i]["path"].as<string>();
+                this->lab_mod.model[i].num_models = config["labeled_models"]["model"][i]["num_models"].as<int>();
+                this->lab_mod.model[i].rand_mode = config["labeled_models"]["model"][i]["rand_mode"].as<string>();
+                this->lab_mod.model[i].min_scale = config["labeled_models"]["model"][i]["min_scale"].as<im::Vector3d>();
+                this->lab_mod.model[i].max_scale = config["labeled_models"]["model"][i]["max_scale"].as<im::Vector3d>();
+                this->lab_mod.model[i].negative_offset = config["labeled_models"]["model"][i]["negative_offset"].as<im::Vector3d>();
+                this->lab_mod.model[i].positive_offset = config["labeled_models"]["model"][i]["positive_offset"].as<im::Vector3d>();
+                this->lab_mod.model[i].positive_dist = config["labeled_models"]["model"][i]["positive_dist"].as<im::Vector3d>();
+                this->lab_mod.model[i].negative_dist = config["labeled_models"]["model"][i]["negative_dist"].as<im::Vector3d>();
+                this->lab_mod.model[i].rotation_range = config["labeled_models"]["model"][i]["rotation_range"].as<im::Vector3d>();
             }
         }
 
     };
 
 }
+}
+
+namespace YAML 
+{
+  template<>
+  struct convert<ignition::math::Vector3d> 
+  {
+    static Node encode(const ignition::math::Vector3d& v3d) 
+    {
+      Node node;
+      node.push_back(v3d.X());
+      node.push_back(v3d.Y());
+      node.push_back(v3d.Z());
+      return node;
+    }
+
+    static bool decode(const Node& node, ignition::math::Vector3d& v3d) 
+    {
+      if(!node.IsSequence() || node.size() != 3) {
+        return false;
+      }
+
+      double x = node[0].as<double>();
+      double y = node[1].as<double>();
+      double z = node[2].as<double>();
+
+      v3d.Set(x, y, z);
+
+      return true;
+    }
+  };
 }
