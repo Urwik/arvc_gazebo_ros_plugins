@@ -494,9 +494,9 @@ namespace gazebo
     std::vector<std::string> models;
     std::string model_name;
     
-    for (int i=0; i < this->config.labeled.num_lbld_models; i++)
+    for (int i=0; i < this->config.lab_mod.num_lbld_models; i++)
     {
-      arvc::plugin::model_base actual_model = this->config.labeled.model[i];
+      arvc::plugin::model_base actual_model = this->config.lab_mod.model[i];
       fs::path original_file = actual_model.path / "model.sdf";
 
       for (int j=0; i < actual_model.num_models; j++)
@@ -1231,33 +1231,33 @@ namespace gazebo
 
 }      
 
-namespace YAML 
-{
-  template<>
-  struct convert<ignition::math::Vector3d> 
-  {
-    static Node encode(const ignition::math::Vector3d& v3d) 
-    {
-      Node node;
-      node.push_back(v3d.X());
-      node.push_back(v3d.Y());
-      node.push_back(v3d.Z());
-      return node;
-    }
+// namespace YAML 
+// {
+//   template<>
+//   struct convert<ignition::math::Vector3d> 
+//   {
+//     static Node encode(const ignition::math::Vector3d& v3d) 
+//     {
+//       Node node;
+//       node.push_back(v3d.X());
+//       node.push_back(v3d.Y());
+//       node.push_back(v3d.Z());
+//       return node;
+//     }
 
-    static bool decode(const Node& node, ignition::math::Vector3d& v3d) 
-    {
-      if(!node.IsSequence() || node.size() != 3) {
-        return false;
-      }
+//     static bool decode(const Node& node, ignition::math::Vector3d& v3d) 
+//     {
+//       if(!node.IsSequence() || node.size() != 3) {
+//         return false;
+//       }
 
-      double x = node[0].as<double>();
-      double y = node[1].as<double>();
-      double z = node[2].as<double>();
+//       double x = node[0].as<double>();
+//       double y = node[1].as<double>();
+//       double z = node[2].as<double>();
 
-      v3d.Set(x, y, z);
+//       v3d.Set(x, y, z);
 
-      return true;
-    }
-  };
-}
+//       return true;
+//     }
+//   };
+// }
