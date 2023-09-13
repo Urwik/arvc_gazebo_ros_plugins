@@ -111,6 +111,9 @@ namespace gazebo
     /// @brief Insert unlabeled models as a perturbations to the world
     private: std::vector<std::string> SpawnRandomEnviroment();
 
+
+    private: std::vector<std::string> SpawnElements(arvc::plugin::model_base[] elements);
+
     /// @brief Delete all models in the world except os_128, camera, and world
     private: void removeModels();
     
@@ -135,10 +138,25 @@ namespace gazebo
     private: void SetModelPose(sdf::ElementPtr modelElement);
 
     /**
+     * @brief Set random pose to a model.
+     * @param modelElement sdf::ElementPtr to the model element.
+     */
+    private: void SetModelPose(sdf::ElementPtr modelElement, arvc::plugin::model_base model_cfg);
+
+
+    /**
      * Set random scale of a model in all its axes.
      * @param modelElement sdf::ElementPtr to the model element.
      */
     private: void SetRandomScale(sdf::ElementPtr model, Eigen::Vector3f _min_scale, Eigen::Vector3f _max_scale);
+
+
+    /**
+     * Set random scale of a model in all its axes.
+     * @param modelElement sdf::ElementPtr to the model element.
+     */
+    private: void SetRandomScale(sdf::ElementPtr model, arvc::plugin::model_base model_cfg);
+
 
     /**
      * @brief Set random scale in 3 axis to a model.
@@ -151,7 +169,7 @@ namespace gazebo
      * @param model sdf::ElementPtr to the model element.
      * @return void.
      */
-    private: void SetLaserRetro(sdf::ElementPtr model);
+    private: void IncreaseVisualLaserRetro(sdf::ElementPtr model);
 
     /// @brief Moves groud model randomly
     private: void MoveGroundModel();
@@ -201,6 +219,13 @@ namespace gazebo
      * @brief Compute random pose X Y Z R P Y
      * @return Return the random pose
      */
+    private: ignition::math::Pose3d ComputeRandomPose(arvc::plugin::model_base model_cfg);
+
+
+    /**
+     * @brief Compute random pose X Y Z R P Y
+     * @return Return the random pose
+     */
     private: ignition::math::Pose3d ComputeWorldRandomPose();
 
     /**
@@ -227,6 +252,12 @@ namespace gazebo
      * @return the vector with the values of the scale.
      */
     private: ignition::math::Vector3d ComputeRandomScale(ignition::math::Vector3d min_scale_, ignition::math::Vector3d max_scale_);
+
+    /**
+     * @brief Compute random scale in 3 axis (X, Y, Z)
+     * @return the vector with the values of the scale.
+     */
+    private: ignition::math::Vector3d ComputeRandomScale(arvc::plugin::model_base model_cfg);
 
     /**
      * @brief Check that pose dont lies inside truss structure
@@ -289,6 +320,8 @@ namespace gazebo
     private: physics::WorldPtr world;
     private: physics::ModelPtr model;
     private: event::ConnectionPtr updateConnection;
+    private: vector<string> inserted_labeled_models_names;
+    private: vector<string> inserted_environment_models_names;
 
     // SENSORS    
     private: physics::ModelPtr sensor_model;

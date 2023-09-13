@@ -8,15 +8,19 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    fs::path path("/home/arvc/workSpaces/arvc_ws/src/arvc_dataset_generator/config/dataset_generator_config.yaml");
+    string package_path =  ros::package::getPath("arvc_dataset_generator");
+    fs::path path( package_path + "/config/dataset_generator_config.yaml");
 
     arvc::plugin::configuration config(path);
 
-    cout << config.simulation << endl;
-    cout << config.sensor << endl;
-    cout << config.camera << endl;
-    cout << config.out_data << endl;
-    cout << config.env << endl;
-    cout << config.lab_mod << endl;
+    cout << type(config.env.model).name() << endl;
+    // cout << config.sensor << endl;
+    // cout << config.camera << endl;
+    // cout << config.out_data << endl;
+    // cout << config.env << endl;
+    // cout << config.lab_mod << endl;
+
+    // cout << config.
+
     return 0;
 }

@@ -25,12 +25,39 @@ namespace plugin{
     {
     public:
         model_base()
-        {    
+        {
+            this->name = "";
+            this->type = "";
+            this->path = fs::path("");
+            this->num_models = 0;
+            this->rand_mode = "";
+            this->min_scale = im::Vector3d(0,0,0);
+            this->max_scale = im::Vector3d(0,0,0);
+            this->negative_offset = im::Vector3d(0,0,0);
+            this->positive_offset = im::Vector3d(0,0,0);
+            this->positive_dist = im::Vector3d(0,0,0);
+            this->negative_dist = im::Vector3d(0,0,0);
+            this->rotation_range = im::Vector3d(0,0,0);
+
         }
         ~model_base()
         {
+            this->name = "";
+            this->type = "";
+            this->path = fs::path("");
+            this->num_models = 0;
+            this->rand_mode = "";
+            this->min_scale = im::Vector3d(0,0,0);
+            this->max_scale = im::Vector3d(0,0,0);
+            this->negative_offset = im::Vector3d(0,0,0);
+            this->positive_offset = im::Vector3d(0,0,0);
+            this->positive_dist = im::Vector3d(0,0,0);
+            this->negative_dist = im::Vector3d(0,0,0);
+            this->rotation_range = im::Vector3d(0,0,0);
         }
+
         string name;
+        string type;
         fs::path path;
         int num_models;
         string rand_mode;
@@ -51,16 +78,6 @@ namespace plugin{
 
         configuration(filesystem::path config_path){
             parse_config(config_path);
-
-            cout << YELLOW <<"Carga el archivo de configuración" << RESET << endl;
-            cout << "Numero de environment models: " << this->num_env_models   << endl;
-            cout << "Numero de labeled models: " << this->num_lbld_models  << endl;
-
-            // environment env(this->num_env_models);
-            // cout << "Pasa la instanciación de Environment" << endl;
-            // labeled lab_mod(this->num_lbld_models);
-            // cout << "Pasa la instanciación de Labeled" << endl;
-
         }
 
         class simulation
@@ -107,6 +124,7 @@ namespace plugin{
                 this->name = "";
                 this->topic = "";
                 this->path = fs::path("");
+                this->offset = im::Vector3d(0,0,0);
             }
 
             ~sensor(){
@@ -114,6 +132,7 @@ namespace plugin{
                 this->name = "";
                 this->topic = "";
                 this->path = "";
+                this->offset = im::Vector3d(0,0,0);
             }
 
             friend std::ostream& operator<<(std::ostream& os, const sensor& obj)
@@ -130,6 +149,7 @@ namespace plugin{
             string name;
             string topic;
             fs::path path;
+            im::Vector3d offset;
         };
 
         class camera
@@ -335,8 +355,9 @@ namespace plugin{
 
         virtual void parse_config(filesystem::path config_path)
         {
-
+            cout << RED << config_path << RESET << endl;
             this->config = YAML::LoadFile(config_path.string().c_str());
+
             const YAML::Node& model_list = config["environment"]["model"];
             const YAML::Node& lbld_model_list = config["labeled_models"]["model"];
 
@@ -356,6 +377,7 @@ namespace plugin{
             this->sensor.name = config["sensor"]["name"].as<string>();
             this->sensor.topic = config["sensor"]["topic"].as<string>();
             this->sensor.path = config["sensor"]["path"].as<string>();
+            this->sensor.offset = config["sensor"]["offset"].as<im::Vector3d>();
 
             // CAMERAS
             this->camera.enable = config["camera"]["enable"].as<bool>();
@@ -378,6 +400,7 @@ namespace plugin{
             for (int i = 0 ; i < this->env.num_env_models  ; i++)
             {
                 this->env.model[i].name = config["environment"]["model"][i]["name"].as<string>();
+                this->env.model[i].type = config["environment"]["model"][i]["type"].as<string>();
                 this->env.model[i].path = config["environment"]["model"][i]["path"].as<string>();
                 this->env.model[i].num_models = config["environment"]["model"][i]["num_models"].as<int>();
                 this->env.model[i].rand_mode = config["environment"]["model"][i]["rand_mode"].as<string>();
@@ -397,6 +420,7 @@ namespace plugin{
             for (int i = 0 ; i <  this->lab_mod.num_lbld_models ; i++)
             {
                 this->lab_mod.model[i].name = config["labeled_models"]["model"][i]["name"].as<string>();
+                this->lab_mod.model[i].type = config["labeled_models"]["model"][i]["type"].as<string>();
                 this->lab_mod.model[i].path = config["labeled_models"]["model"][i]["path"].as<string>();
                 this->lab_mod.model[i].num_models = config["labeled_models"]["model"][i]["num_models"].as<int>();
                 this->lab_mod.model[i].rand_mode = config["labeled_models"]["model"][i]["rand_mode"].as<string>();
