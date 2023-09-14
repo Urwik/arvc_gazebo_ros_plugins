@@ -1,11 +1,18 @@
 
+<p align="center">
+  <img src="images/PRIMERA-ARTICULACION-COLOR-CMYK_ok.jpg" alt="Logo" width=100" height="40" align="right">
+</p>
+<p align="center">
+  <img src="images/version_principal2_72p.jpg" alt="Logo" width=81" height="23" align="right">
+</p>
+
 # arvc_gazebo_ros_plugins
+
+![Alt Text](images/TRAIN_ENVIROMENT.jpg)
 
 Este paquete contiene una serie de plugins para insertar y eliminar modelos en entornos de Gazebo. Cada modelo, dispone de múltiples elementos visuales. A cada elemento visual se le puede asociar un valor de modo que los datos obtenidos por un sensor LiDAR quedan etiquetados automáticamente. 
 
 Para ello se hace uso de la propiedad de reflectividad asignada a cada elemento visual de un modelo. 
-
-
 
 
 ## Installation
