@@ -31,6 +31,7 @@ namespace plugin{
             this->path = fs::path("");
             this->num_models = 0;
             this->rand_mode = "";
+            this->apply_sensor_offset = false;
             this->min_scale = im::Vector3d(0,0,0);
             this->max_scale = im::Vector3d(0,0,0);
             this->negative_offset = im::Vector3d(0,0,0);
@@ -38,7 +39,6 @@ namespace plugin{
             this->positive_dist = im::Vector3d(0,0,0);
             this->negative_dist = im::Vector3d(0,0,0);
             this->rotation_range = im::Vector3d(0,0,0);
-
         }
         ~model_base()
         {
@@ -46,6 +46,7 @@ namespace plugin{
             this->type = "";
             this->path = fs::path("");
             this->num_models = 0;
+            this->apply_sensor_offset = false;
             this->rand_mode = "";
             this->min_scale = im::Vector3d(0,0,0);
             this->max_scale = im::Vector3d(0,0,0);
@@ -60,6 +61,7 @@ namespace plugin{
         string type;
         fs::path path;
         int num_models;
+        bool apply_sensor_offset;
         string rand_mode;
         im::Vector3d min_scale;
         im::Vector3d max_scale;

@@ -25,6 +25,8 @@
 #include "arvc_gazebo_ros_plugins/arvc_dataset_generator_utils.hpp"
 #include "arvc_gazebo_ros_plugins/arvc_dataset_generator_utils.hpp"
 
+namespace im = ignition::math;
+
 namespace gazebo
 {
   class DatasetGenerator : public WorldPlugin
@@ -71,7 +73,7 @@ namespace gazebo
     private: void TakeScreenShot();
 
     /// @brief Gets transform between camera and sensor
-    private: ignition::math::Pose3d GetCameraSensorTF();
+    private: im::Pose3d GetCameraSensorTF();
 
     /// @brief Gets transform between camera and sensor
     private: void SaveCameraSensorTF();
@@ -103,7 +105,7 @@ namespace gazebo
     private: std::filesystem::path ResetTemporarySDFfile(std::filesystem::path sdfPath);
 
 
-    private: void InsertModel(arvc::plugin::model_base _model, int _model_index);
+    private: void InsertModel(int _model_index);
 
     /// @brief Insert labeled cuboid models in random scales and poses
     private: std::vector<std::string> SpawnRandomModels();
@@ -142,6 +144,11 @@ namespace gazebo
      * @param modelElement sdf::ElementPtr to the model element.
      */
     private: void SetModelPose(sdf::ElementPtr modelElement, arvc::plugin::model_base model_cfg);
+
+
+    private: void DatasetGenerator::SetModelPosition(sdf::ElementPtr modelElement, arvc::plugin::model_base model_cfg);
+
+    private: void DatasetGenerator::SetModelOrientation(sdf::ElementPtr modelElement);
 
 
     /**
@@ -213,57 +220,66 @@ namespace gazebo
      * @brief Compute random pose X Y Z R P Y
      * @return Return the random pose
      */
-    private: ignition::math::Pose3d ComputeRandomPose();
+    private: im::Pose3d ComputeRandomPose();
 
     /**
      * @brief Compute random pose X Y Z R P Y
      * @return Return the random pose
      */
-    private: ignition::math::Pose3d ComputeRandomPose(arvc::plugin::model_base model_cfg);
+    private: im::Pose3d ComputeRandomPose(arvc::plugin::model_base model_cfg);
 
 
     /**
      * @brief Compute random pose X Y Z R P Y
      * @return Return the random pose
      */
-    private: ignition::math::Pose3d ComputeWorldRandomPose();
+    private: im::Pose3d ComputeWorldRandomPose();
 
     /**
      * @brief Compute random position X Y Z
      * @return Return the random position
      */
-    private: ignition::math::Vector3d ComputeEnvRandPosition();
+    private: im::Vector3d ComputeEnvRandPosition();
+
+
+
+    private: im::Vector3d DatasetGenerator::ComputeRandomPosition(arvc::plugin::model_base model_cfg);
 
     /**
      * @brief Compute random rotation R P Y
      * @return Return the random orientation
      */
-    private: ignition::math::Vector3d ComputeRandRotation();
-
+    private: im::Vector3d ComputeRandRotation();
 
     /**
-     * @brief Compute random scale in 3 axis (X, Y, Z)
-     * @return the vector with the values of the scale.
+     * @brief Compute random rotation R P Y
+     * @return Return the random orientation
      */
-    private: ignition::math::Vector3d ComputeRandomScale();
+    private: im::Vector3d DatasetGenerator::ComputeRandomRotation(arvc::plugin::model_base model_cfg);
     
     /**
      * @brief Compute random scale in 3 axis (X, Y, Z)
      * @return the vector with the values of the scale.
      */
-    private: ignition::math::Vector3d ComputeRandomScale(ignition::math::Vector3d min_scale_, ignition::math::Vector3d max_scale_);
+    private: im::Vector3d ComputeRandomScale();
+    
+    /**
+     * @brief Compute random scale in 3 axis (X, Y, Z)
+     * @return the vector with the values of the scale.
+     */
+    private: im::Vector3d ComputeRandomScale(im::Vector3d min_scale_, im::Vector3d max_scale_);
 
     /**
      * @brief Compute random scale in 3 axis (X, Y, Z)
      * @return the vector with the values of the scale.
      */
-    private: ignition::math::Vector3d ComputeRandomScale(arvc::plugin::model_base model_cfg);
+    private: im::Vector3d ComputeRandomScale(arvc::plugin::model_base model_cfg);
 
     /**
      * @brief Check that pose dont lies inside truss structure
      * @return Return true if pose is valid
      */
-    private: bool ReachPositionOffset(ignition::math::Pose3d pose);
+    private: bool ReachPositionOffset(im::Pose3d pose);
 
 
     /**
@@ -276,20 +292,27 @@ namespace gazebo
      * @brief Apply offset to the passed coordinate.
      * @return the new vector
      */
-    private: ignition::math::Vector3d ApplyOffset(ignition::math::Vector3d input);
+    private: im::Vector3d ApplyOffset(im::Vector3d input);
 
     /**
      * @brief Apply offset to the passed coordinate.
      * @return the new vector
      */
-    private: ignition::math::Vector3d ApplyOffset(ignition::math::Vector3d input, ignition::math::Vector3d offset_);
+    private: im::Vector3d ApplyOffset(im::Vector3d input, im::Vector3d offset_);
+
+    
+    /**
+     * @brief Apply offset to the passed coordinate.
+     * @return the new vector
+     */
+    private: im::Vector3d DatasetGenerator::ApplySensorOffset(im::Vector3d position);
 
     /**
      * @brief Aplly rotation to a model
      * @param model_ptr Pointer to a model in gazebo
      * @param rotation Rotation vector R P Y
      */
-    private: void ApplyRotation(physics::ModelPtr model_ptr, ignition::math::Vector3d rotation);
+    private: void ApplyRotation(physics::ModelPtr model_ptr, im::Vector3d rotation);
 
     /**
      * @brief Return the number of files in an existing directory.
@@ -327,7 +350,7 @@ namespace gazebo
     private: physics::ModelPtr sensor_model;
     private: physics::ModelPtr camera_model;
     private: sensors::CameraSensorPtr camera;
-    private: ignition::math::Pose3d camera_pose;
+    private: im::Pose3d camera_pose;
     private: std::string cam_name;
     
 
@@ -349,6 +372,8 @@ namespace gazebo
     private: pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud;
 
     // HELPERS
+    private: sdf::ElementPtr inserting_model;
+    private: arvc::plugin::model_base inserting_model_cfg;
     private: bool ousterReady;
     private: bool handle_to_cam;
     private: bool take_screenshot;

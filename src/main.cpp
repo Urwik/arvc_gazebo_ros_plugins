@@ -1,10 +1,12 @@
 #include <iostream>
 #include <filesystem>
+#include <ignition/math.hh>
 
 #include "arvc_gazebo_ros_plugins/arvc_dataset_generator_utils.hpp"
 
 namespace fs = std::filesystem;
 using namespace std;
+namespace im = ignition::math;
 
 int main(int argc, char** argv)
 {
@@ -13,7 +15,14 @@ int main(int argc, char** argv)
 
     arvc::plugin::configuration config(path);
 
-    cout << type(config.env.model).name() << endl;
+    for (size_t i = 0; i < 100; i++)
+    {
+        cout << im::Rand::DblNormal(0, 1) << endl; 
+    }
+    
+
+
+    // cout << type(config.env.model).name() << endl;
     // cout << config.sensor << endl;
     // cout << config.camera << endl;
     // cout << config.out_data << endl;
