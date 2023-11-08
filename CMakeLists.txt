@@ -10,13 +10,14 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
-  # gazebo_ros
+  gazebo_ros
   pcl_conversions
   pcl_ros
+  tf2_ros
 )
 
 find_package(gazebo REQUIRED)
-find_package(PCL 1.3 REQUIRED)
+find_package(PCL 1.10 REQUIRED)
 find_package (Qt5Core REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -87,3 +88,6 @@ include_directories(
 
 add_executable(main src/main.cpp)
 target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES}) 
+
+add_library(arvc_gazebo_ros_tf_publisher src/arvc_gazebo_ros_tf_publisher.cpp)
+target_link_libraries( arvc_gazebo_ros_tf_publisher ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES})

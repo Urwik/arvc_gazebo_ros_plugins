@@ -1,67 +1,71 @@
 
-#include <arvc_gazebo_ros_plugins/arvc_gazebo_ros_world_tf.h>
+#include "arvc_gazebo_ros_plugins/arvc_gazebo_ros_tf_publisher.h"
+
+
 
 
 namespace gazebo
 {
-  // Register this plugin with the simulator
-  GZ_REGISTER_MODEL_PLUGIN(PubWorldTF)
-
-
   ////////////////////////////////////////////////////////////////////////////////
   // Constructor
-  PubWorldTF::PubWorldTF()
+  TfPublisher::TfPublisher()
   {
-    this->_nh.reset(new ros::NodeHandle("gazebo_client"));
-    this->_tf_broadcaster.reset(new tf2_ros::TransformBroadcaster());
+    this->parent_model.reset();
+    this->child_model.reset();
+    this->nh.reset();
   }
-
 
   ////////////////////////////////////////////////////////////////////////////////
   // Destructor
-  PubWorldTF::~PubWorldTF()
+  TfPublisher::~TfPublisher()
   {
+    this->parent_model.reset();
+    this->child_model.reset();
+    this->nh.reset(new ros::NodeHandle("gazebo_client"));
   }
 
 
   //////////////////////////////////////////////////////////////////////////////
-  void PubWorldTF::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
+  void TfPublisher::Load(physics::ModelPtr _model, sdf::ElementPtr /*_sdf*/)
   {
-    this->model = _parent;
+    ROS_INFO( GREEN "----- LOADING" YELLOW  " TF_PUBLISHER " GREEN "PLUGIN -----" RESET);
 
-    // Parse args from SDF
-    if (_sdf->HasElement("target_frame"))
-      this->frameName = _sdf->GetElement("target_frame")->Get<std::string>();
-    else
-      this->frameName = "base_link";
+    // Store the pointer to the model
+    this->child_model = _model;
+  }
 
-    this->updateConnection = event::Events::ConnectWorldUpdateBegin(
-        std::bind(&PubWorldTF::OnUpdate, this));
 
+  void TfPublisher::RosSetup()
+  {    
     if (!ros::isInitialized()) {
       ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
         << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
       return;
     }
-    
-    boost::thread ros_pub_thread(boost::bind(&PubWorldTF::PubThread, this));
-
-    ROS_INFO("----- TF PLUGIN LOADED CORRECTLY -----");
-    ROS_INFO("----- %s --> gz_world -----", this->frameName.c_str());
   }
 
 
-  //////////////////////////////////////////////////////////////////////////////
-  void PubWorldTF::OnUpdate()
+
+  void TfPublisher::Init()
   {
+    this->RosSetup();
+    this->ros_publication_thread = std::thread(&TfPublisher::PubThread, this);
+
+    ROS_INFO( GREEN "----- TF PLUGIN INITIALIZED CORRECTLY -----" RESET);
   }
 
-
   //////////////////////////////////////////////////////////////////////////////
-  void PubWorldTF::PubThread(){
+  void TfPublisher::PubThread(){
 
-    int seq = 0;
-    while(true)
+    while (true)
+    {
+      ROS_INFO(GREEN "TF PUBLISHER THREAD STARTED" RESET);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+    
+    // int seq = 0;
+/*     while(true)
     {
       tf::Vector3 pose;
       tf::Quaternion quat;
@@ -89,11 +93,7 @@ namespace gazebo
       ros::spinOnce();
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-
-      geometry_msgs::TransformPtr transform_msg(new geometry_msgs::Transform());
-      tf::Transform::
-
-    }
+    } */
   }
 
 }
