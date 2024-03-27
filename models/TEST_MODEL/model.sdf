@@ -21,7 +21,7 @@
       <self_collide>false</self_collide>
       <enable_wind>false</enable_wind>
       <kinematic>false</kinematic>
-      <pose>0.5 0.5 0.5 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <gravity>true</gravity>
       <visual name='visual'>
         <geometry>

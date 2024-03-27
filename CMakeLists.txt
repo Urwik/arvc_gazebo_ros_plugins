@@ -21,6 +21,7 @@ find_package(PCL 1.10 REQUIRED)
 find_package (Qt5Core REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets PrintSupport)
 # find_package(SDFormat REQUIRED)
 
 
@@ -70,6 +71,11 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${Qt5Core_INCLUDE_DIRS}
   ${YAML_CPP_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}/include/arvc_gazebo_ros_plugins
+  ${Qt5Core_INCLUDE_DIRS}
+  ${Qt5Gui_INCLUDE_DIRS}
+  ${Qt5Widgets_INCLUDE_DIRS}
+  ${Qt5PrintSupport_INCLUDE_DIRS}
   # ${SDFormat_INCLUDE_DIRS}
 )
 
@@ -89,5 +95,5 @@ include_directories(
 add_executable(main src/main.cpp)
 target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES}) 
 
-add_library(arvc_gazebo_ros_tf_publisher src/arvc_gazebo_ros_tf_publisher.cpp)
-target_link_libraries( arvc_gazebo_ros_tf_publisher ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES})
+# add_library(arvc_gazebo_ros_tf_publisher src/arvc_gazebo_ros_tf_publisher.cpp)
+# target_link_libraries( arvc_gazebo_ros_tf_publisher ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} Qt5::Core Qt5::Widgets Qt5::PrintSupport) 

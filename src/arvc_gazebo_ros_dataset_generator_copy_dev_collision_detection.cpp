@@ -62,7 +62,7 @@ namespace gazebo
     this->pcl_cloud.reset(new PointCloud);
     this->take_screenshot = false;
     this->laser_retro = 1;
-    this->config.sim.paused = true
+    this->config.simulation.paused = true;
   }
 
   /////////////////////////////////
@@ -74,7 +74,7 @@ namespace gazebo
     this->pcl_cloud.reset(new PointCloud);
     this->take_screenshot = false;
     this->laser_retro = 1;
-    this->config.sim.paused = true;
+    this->config.simulation.paused = true;
   }
 
 
@@ -127,7 +127,7 @@ namespace gazebo
     std::vector<std::string> rmvd_models; 
     int estado = 0;
 
-    while (this->env_count < this->NUM_ENV)
+    while (this->env_count < this->config.out_data.quantity)
     {
       switch (estado)
       {
@@ -154,13 +154,13 @@ namespace gazebo
         
         // REMOVING MODELS THAT ARE IN COLLISION WITH THE SENSOR
         case 2:
-          ROS_INFO_COND(this->debug_msgs, YELLOW "CALLING REMOVE COLLIDE MODELS" RESET);
+          ROS_INFO_COND(this->config.simulation.debug_msgs, YELLOW "CALLING REMOVE COLLIDE MODELS" RESET);
 
           rmvd_models = this->RemoveCollideModels(this->sensor_model);
 
-          if (this->debug_msgs)
+          if (this->config.simulation.debug_msgs)
           {
-            ROS_INFO_COND(this->debug_msgs, BLUE "REMOVED MODELS: " RESET);
+            ROS_INFO_COND(this->config.simulation.debug_msgs, BLUE "REMOVED MODELS: " RESET);
             if (rmvd_models.size() > 0)
             {
               for (size_t i = 0; i < rmvd_models.size(); i++)
@@ -168,7 +168,7 @@ namespace gazebo
             }
           }
 
-          ROS_INFO_COND(this->debug_msgs, GREEN "PASSED REMOVE COLLIDE MODELS" RESET);
+          ROS_INFO_COND(this->config.simulation.debug_msgs, GREEN "PASSED REMOVE COLLIDE MODELS" RESET);
           estado = 3;
           break;
 
@@ -215,167 +215,167 @@ namespace gazebo
 
   // CONFIGURATION AND PARSING ARGUMENTS
   //////////////////////////////////////////////////////////////////////////////
-  // void DatasetGenerator::ParseArgs(sdf::ElementPtr sdf)
-  // {
-  //   ROS_INFO(BLUE "PARSING ARGUMENTS... " RESET);
+/*   void DatasetGenerator::ParseArgs(sdf::ElementPtr sdf)
+  {
+    ROS_INFO(BLUE "PARSING ARGUMENTS... " RESET);
 
-  //   this->GetYamlConfig();
+    this->GetYamlConfig();
 
 
 
-  //   // OUTPUT DIRECTORY
-  //   if (!sdf->HasElement("out_dir")){
-  //     this->output_dir = this->config.out_data.out_dir;
-  //   } else {
-  //     this->output_dir = sdf->GetElement("out_dir")->Get<std::string>();
-  //   }
-  //   std::cout << YELLOW << "OUTPUT DIR: " << RESET << "\n " << this->output_dir.c_str() << std::endl;
+    // OUTPUT DIRECTORY
+    if (!sdf->HasElement("out_dir")){
+      this->output_dir = this->config.out_data.out_dir;
+    } else {
+      this->output_dir = sdf->GetElement("out_dir")->Get<std::string>();
+    }
+    std::cout << YELLOW << "OUTPUT DIR: " << RESET << "\n " << this->output_dir.c_str() << std::endl;
 
-  //   // ENVIROMENT MODELS DIRECTORY
-  //   if (!sdf->HasElement("env_dir")) {
-  //     this->ENV_DIR = this->config["plugin"]["env_dir"].as<std::string>();
-  //   } else {
-  //     this->ENV_DIR = sdf->GetElement("env_dir")->Get<std::string>();
-  //   }
-  //   std::cout << YELLOW << "ENVIROMENTS DIR: " << RESET << "\n " << this->ENV_DIR.c_str() << std::endl;
+    // ENVIROMENT MODELS DIRECTORY
+    if (!sdf->HasElement("env_dir")) {
+      this->ENV_DIR = this->config["plugin"]["env_dir"].as<std::string>();
+    } else {
+      this->ENV_DIR = sdf->GetElement("env_dir")->Get<std::string>();
+    }
+    std::cout << YELLOW << "ENVIROMENTS DIR: " << RESET << "\n " << this->ENV_DIR.c_str() << std::endl;
 
-  //   // LABELED MODELS DIRECTORY
-  //   if (!sdf->HasElement("mod_dir")) {
-  //     this->models_dir = this->config["plugin"]["mod_dir"].as<std::string>();
-  //   } else {
-  //     this->models_dir = sdf->GetElement("mod_dir")->Get<std::string>();
-  //   }
-  //   std::cout << YELLOW << "MODELS DIR: " << RESET << "\n " << this->models_dir.c_str() << std::endl;
+    // LABELED MODELS DIRECTORY
+    if (!sdf->HasElement("mod_dir")) {
+      this->models_dir = this->config["plugin"]["mod_dir"].as<std::string>();
+    } else {
+      this->models_dir = sdf->GetElement("mod_dir")->Get<std::string>();
+    }
+    std::cout << YELLOW << "MODELS DIR: " << RESET << "\n " << this->models_dir.c_str() << std::endl;
 
-  //   // CAMERA MODEL ABSOLUTE PATH
-  //   if (!sdf->HasElement("cam_model")) {
-  //     this->cam_path = this->config["plugin"]["cam_model"].as<std::string>();
-  //   } else {
-  //     this->cam_path = sdf->GetElement("cam_model")->Get<std::string>();
-  //   }
-  //   std::cout << YELLOW << "CAMERA MODEL: " << RESET << "\n " << this->cam_path.c_str() << std::endl;
+    // CAMERA MODEL ABSOLUTE PATH
+    if (!sdf->HasElement("cam_model")) {
+      this->cam_path = this->config["plugin"]["cam_model"].as<std::string>();
+    } else {
+      this->cam_path = sdf->GetElement("cam_model")->Get<std::string>();
+    }
+    std::cout << YELLOW << "CAMERA MODEL: " << RESET << "\n " << this->cam_path.c_str() << std::endl;
 
-  //   // WORLD MODEL NAME
-  //   if (!sdf->HasElement("grnd_model")) {
-  //     this->ground_model_name = this->config["plugin"]["ground_model_name"].as<std::string>();
-  //   } else {
-  //     this->ground_model_name = sdf->GetElement("grnd_model")->Get<std::string>("name");
-  //   }
-  //   std::cout << YELLOW << "WORLD MODEL NAME: " << RESET << "\n " << this->ground_model_name.c_str() << std::endl;
+    // WORLD MODEL NAME
+    if (!sdf->HasElement("grnd_model")) {
+      this->ground_model_name = this->config["plugin"]["ground_model_name"].as<std::string>();
+    } else {
+      this->ground_model_name = sdf->GetElement("grnd_model")->Get<std::string>("name");
+    }
+    std::cout << YELLOW << "WORLD MODEL NAME: " << RESET << "\n " << this->ground_model_name.c_str() << std::endl;
 
-  //   // SENSOR MODEL NAME
-  //   if (!sdf->HasElement("sensor_name")) {
-  //     this->sensor_name = this->config["plugin"]["sensor_name"].as<std::string>();
-  //   } else {
-  //     this->sensor_name = sdf->GetElement("sensor_name")->Get<std::string>("name");
-  //   }
-  //   std::cout << YELLOW << "SENSOR NAME: " << RESET << "\n " << this->sensor_name.c_str() << std::endl;
+    // SENSOR MODEL NAME
+    if (!sdf->HasElement("sensor_name")) {
+      this->sensor_name = this->config["plugin"]["sensor_name"].as<std::string>();
+    } else {
+      this->sensor_name = sdf->GetElement("sensor_name")->Get<std::string>("name");
+    }
+    std::cout << YELLOW << "SENSOR NAME: " << RESET << "\n " << this->sensor_name.c_str() << std::endl;
 
-  //   // SENSOR TOPIC NAME
-  //   if (!sdf->HasElement("sensor_topic")) {
-  //     this->sensor_topic = this->config["plugin"]["sensor_topic"].as<std::string>();
-  //   } else {
-  //     this->sensor_topic = sdf->GetElement("sensor_topic")->Get<std::string>("name");
-  //   }
-  //   std::cout << YELLOW << "SENSOR TOPIC: " << RESET << "\n " << this->sensor_topic.c_str() << std::endl;
+    // SENSOR TOPIC NAME
+    if (!sdf->HasElement("sensor_topic")) {
+      this->sensor_topic = this->config["plugin"]["sensor_topic"].as<std::string>();
+    } else {
+      this->sensor_topic = sdf->GetElement("sensor_topic")->Get<std::string>("name");
+    }
+    std::cout << YELLOW << "SENSOR TOPIC: " << RESET << "\n " << this->sensor_topic.c_str() << std::endl;
 
-  //   // NUM OF ENVIROMENTS TO CREATE
-  //   if (!sdf->HasElement("NUM_ENV")) {
-  //     this->NUM_ENV = this->config["plugin"]["num_env"].as<int>();
-  //   } else {
-  //     this->NUM_ENV = sdf->GetElement("num_env")->Get<int>();
-  //   }
-  //   std::cout << YELLOW << "ENVS TO GENERATE: " << RESET << "\n " << this->NUM_ENV << std::endl;
+    // NUM OF ENVIROMENTS TO CREATE
+    if (!sdf->HasElement("NUM_ENV")) {
+      this->NUM_ENV = this->config["plugin"]["num_env"].as<int>();
+    } else {
+      this->NUM_ENV = sdf->GetElement("num_env")->Get<int>();
+    }
+    std::cout << YELLOW << "ENVS TO GENERATE: " << RESET << "\n " << this->NUM_ENV << std::endl;
 
-  //   // NUM OF LABELED MODELS TO SPAWN AROUND THE SENSOR
-  //   if (!sdf->HasElement("num_models")) {
-  //     this->NUM_MODELS = this->config["plugin"]["num_models"].as<int>();
-  //   } else {
-  //     this->NUM_MODELS = sdf->GetElement("num_models")->Get<int>();
-  //   }
-  //   std::cout << YELLOW << "MODELS TO SWAPN PER ENV: " << RESET << "\n " << this->NUM_MODELS << std::endl;
+    // NUM OF LABELED MODELS TO SPAWN AROUND THE SENSOR
+    if (!sdf->HasElement("num_models")) {
+      this->NUM_MODELS = this->config["plugin"]["num_models"].as<int>();
+    } else {
+      this->NUM_MODELS = sdf->GetElement("num_models")->Get<int>();
+    }
+    std::cout << YELLOW << "MODELS TO SWAPN PER ENV: " << RESET << "\n " << this->NUM_MODELS << std::endl;
 
-  //   // OFFSETS AVOID LABELED MODELS TO SPAWN OVER THE SENSOR
-  //   if (!sdf->HasElement("negative_offset")) {
-  //     this->neg_offset = this->config["plugin"]["negative_offset"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->neg_offset = sdf->GetElement("negative_offset")->Get<ignition::math::Vector3d>();
-  //   }
+    // OFFSETS AVOID LABELED MODELS TO SPAWN OVER THE SENSOR
+    if (!sdf->HasElement("negative_offset")) {
+      this->neg_offset = this->config["plugin"]["negative_offset"].as<ignition::math::Vector3d>();
+    } else {
+      this->neg_offset = sdf->GetElement("negative_offset")->Get<ignition::math::Vector3d>();
+    }
     
-  //   if (!sdf->HasElement("positive_offset")) {
-  //     this->pos_offset = this->config["plugin"]["positive_offset"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->pos_offset = sdf->GetElement("positive_offset")->Get<ignition::math::Vector3d>();
-  //   }
+    if (!sdf->HasElement("positive_offset")) {
+      this->pos_offset = this->config["plugin"]["positive_offset"].as<ignition::math::Vector3d>();
+    } else {
+      this->pos_offset = sdf->GetElement("positive_offset")->Get<ignition::math::Vector3d>();
+    }
 
-  //   // MAX DIST FROM ORIGIN(0, 0, 0) TO SPAWN LABELED MODELS
-  //   if (!sdf->HasElement("positive_dist")) {
-  //     this->pos_dist = this->config["plugin"]["positive_dist"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->pos_dist = sdf->GetElement("positive_dist")->Get<ignition::math::Vector3d>();
-  //   }
+    // MAX DIST FROM ORIGIN(0, 0, 0) TO SPAWN LABELED MODELS
+    if (!sdf->HasElement("positive_dist")) {
+      this->pos_dist = this->config["plugin"]["positive_dist"].as<ignition::math::Vector3d>();
+    } else {
+      this->pos_dist = sdf->GetElement("positive_dist")->Get<ignition::math::Vector3d>();
+    }
 
-  //   // MIN DIST FROM ORIGIN(0, 0, 0) TO SPAWN LABELED MODELS
-  //   if (!sdf->HasElement("negative_dist")) {
-  //     this->neg_dist = this->config["plugin"]["negative_dist"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->neg_dist = sdf->GetElement("negative_dist")->Get<ignition::math::Vector3d>();
-  //   }
+    // MIN DIST FROM ORIGIN(0, 0, 0) TO SPAWN LABELED MODELS
+    if (!sdf->HasElement("negative_dist")) {
+      this->neg_dist = this->config["plugin"]["negative_dist"].as<ignition::math::Vector3d>();
+    } else {
+      this->neg_dist = sdf->GetElement("negative_dist")->Get<ignition::math::Vector3d>();
+    }
 
-  //   // LOWEST SCALE FACTOR FOR LABELED MODELS
-  //   if (!sdf->HasElement("min_scale")) {
-  //     this->min_scale = this->config["plugin"]["min_scale"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->min_scale = sdf->GetElement("min_scale")->Get<ignition::math::Vector3d>();
-  //   }
+    // LOWEST SCALE FACTOR FOR LABELED MODELS
+    if (!sdf->HasElement("min_scale")) {
+      this->min_scale = this->config["plugin"]["min_scale"].as<ignition::math::Vector3d>();
+    } else {
+      this->min_scale = sdf->GetElement("min_scale")->Get<ignition::math::Vector3d>();
+    }
 
-  //   // HIGHEST SCALE FACTOR FOR LABELED MODELS
-  //   if (!sdf->HasElement("max_scale")) {
-  //     this->max_scale = this->config["plugin"]["max_scale"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->max_scale = sdf->GetElement("max_scale")->Get<ignition::math::Vector3d>();
-  //   }
+    // HIGHEST SCALE FACTOR FOR LABELED MODELS
+    if (!sdf->HasElement("max_scale")) {
+      this->max_scale = this->config["plugin"]["max_scale"].as<ignition::math::Vector3d>();
+    } else {
+      this->max_scale = sdf->GetElement("max_scale")->Get<ignition::math::Vector3d>();
+    }
 
-  //   // DISTRIBUTION USED TO GENERATE RANDOM VALUES, "normal" OR "uniform"
-  //   if (!sdf->HasElement("rand_mode")) {
-  //     this->RANDMODE = this->config["plugin"]["rand_mode"].as<std::string>();
-  //   } else {
-  //     this->RANDMODE = sdf->GetElement("rand_mode")->Get<std::string>();
-  //   }
-  //   std::cout << YELLOW << "RANDOM MODE: " << RESET << "\n " << this->RANDMODE.c_str() << std::endl;
+    // DISTRIBUTION USED TO GENERATE RANDOM VALUES, "normal" OR "uniform"
+    if (!sdf->HasElement("rand_mode")) {
+      this->RANDMODE = this->config["plugin"]["rand_mode"].as<std::string>();
+    } else {
+      this->RANDMODE = sdf->GetElement("rand_mode")->Get<std::string>();
+    }
+    std::cout << YELLOW << "RANDOM MODE: " << RESET << "\n " << this->RANDMODE.c_str() << std::endl;
 
 
-  //   // SETS THE WAY POINTCLOUD IS SAVED, BINARY OR ASCII
-  //   if (!sdf->HasElement("pc_binary")) {
-  //     this->pc_binary = this->config["plugin"]["pc_binary"].as<bool>();
-  //   } else {
-  //     this->pc_binary = sdf->GetElement("pc_binary")->Get<bool>();
-  //   }
-  //   std::cout << YELLOW << "CLOUD BINARY FORMAT: " << RESET << "\n " << this->pc_binary << std::endl;
+    // SETS THE WAY POINTCLOUD IS SAVED, BINARY OR ASCII
+    if (!sdf->HasElement("pc_binary")) {
+      this->pc_binary = this->config["plugin"]["pc_binary"].as<bool>();
+    } else {
+      this->pc_binary = sdf->GetElement("pc_binary")->Get<bool>();
+    }
+    std::cout << YELLOW << "CLOUD BINARY FORMAT: " << RESET << "\n " << this->pc_binary << std::endl;
 
-  //   // PLOT EXTRA INFORMATION MESSAVES OVER THE TERMINAL
-  //   if (!sdf->HasElement("debug_msgs")) {
-  //     this->debug_msgs = this->config["plugin"]["debug_msgs"].as<bool>();
-  //   } else {
-  //     this->debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
-  //   }
-  //     std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
+    // PLOT EXTRA INFORMATION MESSAVES OVER THE TERMINAL
+    if (!sdf->HasElement("debug_msgs")) {
+      this->config.simulation.debug_msgs = this->config["plugin"]["debug_msgs"].as<bool>();
+    } else {
+      this->config.simulation.debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
+    }
+      std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->config.simulation.debug_msgs << std::endl;
 
-  //   // 
-  //   if (!sdf->HasElement("sensor_offset")) {
-  //     this->sensor_offset = this->config["plugin"]["sensor_offset"].as<float>();
-  //   } else {
-  //     this->sensor_offset = sdf->GetElement("sensor_offset")->Get<float>();
-  //   }
+    // 
+    if (!sdf->HasElement("sensor_offset")) {
+      this->sensor_offset = this->config["plugin"]["sensor_offset"].as<float>();
+    } else {
+      this->sensor_offset = sdf->GetElement("sensor_offset")->Get<float>();
+    }
 
-  //   // 
-  //   if (!sdf->HasElement("rotation_range")) {
-  //     this->rot_range = this->config["plugin"]["rotation_range"].as<ignition::math::Vector3d>();
-  //   } else {
-  //     this->rot_range = sdf->GetElement("rotation_range")->Get<ignition::math::Vector3d>();
-  //   }
-  //     std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->debug_msgs << std::endl;
-  // }
+    // 
+    if (!sdf->HasElement("rotation_range")) {
+      this->rot_range = this->config["plugin"]["rotation_range"].as<ignition::math::Vector3d>();
+    } else {
+      this->rot_range = sdf->GetElement("rotation_range")->Get<ignition::math::Vector3d>();
+    }
+      std::cout << YELLOW << "DEBUG MODE: " << RESET << "\n " << this->config.simulation.debug_msgs << std::endl;
+  } */
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -384,9 +384,8 @@ namespace gazebo
     fs::path package_path(ros::package::getPath("arvc_dataset_generator"));
     fs::path config_path = package_path / "config/dataset_generator_config.yaml";
     
-    this->config = arvc::configuration(config_path);
+    this->config = arvc::plugin::configuration(config_path);
     std::cout << YELLOW << "YAML CONFIG PATH: " << RESET << "\n " << config_path.string().c_str() << std::endl;
-
   }
 
 
@@ -394,7 +393,7 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::InsertCameraModel()
   {
-    sdf::SDFPtr camera_sdf = this->GetSDFfile(this->cam_path);
+    sdf::SDFPtr camera_sdf = this->GetSDFfile(this->config.camera.path);
     this->world->InsertModelSDF(*camera_sdf);
 
     // GET CAMERA NAME
@@ -411,7 +410,7 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   bool DatasetGenerator::GetCameraPointer()
   {
-    ROS_INFO_COND(this->debug_msgs, YELLOW "TRYING TO GET CAMERA: %s" RESET, this->cam_name.c_str());
+    ROS_INFO_COND(this->config.simulation.debug_msgs, YELLOW "TRYING TO GET CAMERA: %s" RESET, this->cam_name.c_str());
     sensors::SensorPtr sensor = sensors::get_sensor(this->cam_name);
 
     if(!sensor)
@@ -430,11 +429,11 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   void DatasetGenerator::TakeScreenShot()
   {
-    ROS_INFO_COND(this->debug_msgs, "TAKING SCREENSHOT");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "TAKING SCREENSHOT");
 
     std::stringstream ss;
     ss.str("");
-    ss << this->images_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".jpg";
+    ss << this->img_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".jpg";
     
     this->camera->SaveFrame(ss.str().c_str());
   }
@@ -490,7 +489,7 @@ namespace gazebo
   //////////////////////////////////////////////////////////////////////////////
   std::vector<std::string> DatasetGenerator::SpawnRandomModels()
   {
-    ROS_INFO_COND(this->debug_msgs, "SPAWNING MODELS...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING MODELS...");
 
     std::vector<std::string> models;
     std::string model_name;
@@ -513,11 +512,11 @@ namespace gazebo
 
         models.push_back(model_name);
 
-        ROS_INFO_COND(this->debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
         this->world->InsertModelSDF(*temp_sdfFile);
       }
     }
-    ROS_INFO_COND(this->debug_msgs, "MODELS SPAWNED CORRECTLY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "MODELS SPAWNED CORRECTLY");
     return models;
   }
 
@@ -529,7 +528,7 @@ namespace gazebo
    */
   std::vector<std::string> DatasetGenerator::SpawnRandomEnviroment()
   {
-    ROS_INFO_COND(this->debug_msgs, "SPAWNING ENVIROMENT...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING ENVIROMENT...");
 
     std::vector<std::string> models;
     std::string model_name;
@@ -551,18 +550,18 @@ namespace gazebo
         this->SetModelPosition(modelElement);
         this->SetRandomMeshScale(modelElement);
 
-        ROS_INFO_COND(this->debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, "SPAWNING MODEL: %s", model_name.c_str());
         this->world->InsertModelSDF(*temp_sdfFile);
       }
     }
-    ROS_INFO_COND(this->debug_msgs, "ENVIROMENT SPAWNED CORRECTLY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "ENVIROMENT SPAWNED CORRECTLY");
     return models;
   }
   
   /////////////////////////////////
   void DatasetGenerator::removeModels()
   {
-    ROS_INFO_COND(this->debug_msgs, "DELETING MODELS...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODELS...");
 
     this->world->SetPaused(true);
 
@@ -573,7 +572,7 @@ namespace gazebo
       std::string name = model_->GetName();
       if(name != this->sensor_name && name != this->ground_model_name && name != this->cam_name)
       {
-        ROS_INFO_COND(this->debug_msgs, "DELETING MODEL: %s", name.c_str());
+        ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODEL: %s", name.c_str());
         this->world->RemoveModel(name);
       }
     }   
@@ -583,17 +582,17 @@ namespace gazebo
   /////////////////////////////////
   void DatasetGenerator::removeModelsByName(std::vector<std::string> models)
   {
-    ROS_INFO_COND(this->debug_msgs, "DELETING MODELS...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODELS...");
 
     this->world->SetPaused(true);
     for(const std::string &name : models)
     {
-      ROS_INFO_COND(this->debug_msgs, "DELETING MODEL: %s", name.c_str());
+      ROS_INFO_COND(this->config.simulation.debug_msgs, "DELETING MODEL: %s", name.c_str());
       this->world->RemoveModel(name);
     }
     this->world->SetPaused(false);
 
-    ROS_INFO_COND(this->debug_msgs, "MODELS DELETED CORRECTLY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "MODELS DELETED CORRECTLY");
   }
 
   /////////////////////////////////
@@ -732,7 +731,7 @@ namespace gazebo
   /// @brief Moves groud model randomly
   void DatasetGenerator::MoveGroundModel()
   {
-    ROS_INFO_COND(this->debug_msgs, "MOVING GROUND MODEL");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "MOVING GROUND MODEL");
     physics::ModelPtr world_model = this->world->ModelByName(this->ground_model_name);
     ignition::math::Pose3d pose = this->ComputeWorldRandomPose();
     
@@ -806,7 +805,7 @@ namespace gazebo
    */
   bool DatasetGenerator::SensorReady()
   {
-    ROS_INFO_COND(this->debug_msgs, "CHECKING IF OUSTER IS READY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "CHECKING IF OUSTER IS READY");
     if(!this->world->ModelByName(this->sensor_name))
       return false;
     else
@@ -820,14 +819,14 @@ namespace gazebo
   /////////////////////////////////
   bool DatasetGenerator::CheckSpawnedModels(std::vector<std::string> model_names)
   {
-    ROS_INFO_COND(this->debug_msgs, "CHECKING SPAWNED MODELS");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "CHECKING SPAWNED MODELS");
 
     for(auto model_name : model_names)
     {
       if(!this->world->ModelByName(model_name))
         return false;
     }
-    ROS_INFO_COND(this->debug_msgs, "MODELS SPAWNED CORRECTLY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "MODELS SPAWNED CORRECTLY");
 
     return true;
   }
@@ -835,13 +834,13 @@ namespace gazebo
   /////////////////////////////////
   bool DatasetGenerator::CheckDeletedModels(std::vector<std::string> model_names)
   {
-    ROS_INFO_COND(this->debug_msgs, "CHECKING DELETE MODELS");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "CHECKING DELETE MODELS");
     for(auto model_name : model_names)
     {
       if(this->world->ModelByName(model_name))
         return false;
     }
-    ROS_INFO_COND(this->debug_msgs, "MODELS DELETED CORRECTLY");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "MODELS DELETED CORRECTLY");
     return true;
   }
 
@@ -889,7 +888,7 @@ namespace gazebo
   /////////////////////////////////
   void DatasetGenerator::SavePointCloud()
   {
-    ROS_INFO_COND(this->debug_msgs, "SAVING POINTCLOUD...");
+    ROS_INFO_COND(this->config.simulation.debug_msgs, "SAVING POINTCLOUD...");
     pcl::PCDWriter writer;
     std::stringstream ss;
     ss.str("");
@@ -948,235 +947,7 @@ namespace gazebo
 
   }
 
-  // HELPER FUNCTIONS CALCULATIONS
-  /////////////////////////////////
-  ignition::math::Pose3d DatasetGenerator::ComputeRandomPose()
-  {
-    using namespace ignition::math;
-    Pose3d pose;
-    Vector3d position;
-    Vector3d rotation;
-
-    if (this->RANDMODE == "uniform")
-    {
-      position.X() = Rand::DblUniform(this->neg_dist.X(), this->pos_dist.X()); 
-      position.Y() = Rand::DblUniform(this->neg_dist.Y(), this->pos_dist.Y()); 
-      position.Z() = Rand::DblUniform(this->neg_dist.Z(), this->pos_dist.Z()); 
-      
-      rotation.X() = Rand::DblUniform(0, this->rot_range[0]* (2*M_PI/360));
-      rotation.Y() = Rand::DblUniform(0, this->rot_range[1]* (2*M_PI/360));
-      rotation.Z() = Rand::DblUniform(0, this->rot_range[2]* (2*M_PI/360));
-    }
-    else if (this->RANDMODE == "normal")
-    {
-      position.X() = Rand::DblNormal(0,this->pos_dist.X()); 
-      position.Y() = Rand::DblNormal(0,this->pos_dist.Y()); 
-      position.Z() = Rand::DblNormal(0,this->pos_dist.Z()); 
-
-      rotation.X() = Rand::DblNormal(0, (this->rot_range[0]*(2*M_PI/360))/3);
-      rotation.Y() = Rand::DblNormal(0, (this->rot_range[1]*(2*M_PI/360))/3);
-      rotation.Z() = Rand::DblNormal(0, (this->rot_range[2]*(2*M_PI/360))/3);
-    }
-    else
-    {
-      ROS_ERROR("WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal");
-    }
-
-    // position = this->ApplyOffset(position);
-    pose.Set(position, rotation);
-
-    return pose;
-  }
-
-  /////////////////////////////////
-  ignition::math::Pose3d DatasetGenerator::ComputeWorldRandomPose()
-  {
-    using namespace ignition::math;
-    Pose3d pose;
-    Vector3d position;
-    Vector3d rotation;
-
-    rotation.X() = 0;
-    rotation.Y() = 0;
-    rotation.Z() = Rand::DblUniform(0, 2*M_PI);
-
-    if (this->RANDMODE == "uniform")
-    {
-      position.X() = Rand::DblUniform(-2, 2); 
-      position.Y() = Rand::DblUniform(-2, 2); 
-      position.Z() = Rand::DblUniform(-0.5, 0.5); 
-    }
-    else if (this->RANDMODE == "normal")
-    {
-      position.X() = Rand::DblNormal(0, 1); 
-      position.Y() = Rand::DblNormal(0, 1); 
-      position.Z() = Rand::DblNormal(0, 0.5); 
-    }
-    else
-      ROS_ERROR("WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal");
-
-    pose.Set(position, rotation);
-
-    return pose;
-  }
-
-  /////////////////////////////////
-  ignition::math::Vector3d DatasetGenerator::ComputeEnvRandPosition()
-  {
-    using namespace ignition::math;
-    Vector3d position;
-    Vector3d offset_(10, 10, 0);
-
-    if (this->RANDMODE == "uniform")
-    {
-      position.X() = Rand::DblUniform(-30, 30);
-      position.Y() = Rand::DblUniform(-30, 30);
-      position.Z() = Rand::DblUniform(0, 0.5);
-    }
-    else if (this->RANDMODE == "normal")
-    {
-      position.X() = Rand::DblNormal(0, 15); 
-      position.Y() = Rand::DblNormal(0, 15);
-      position.Z() = Rand::DblNormal(0, 0.25);
-    }
-    else
-      ROS_ERROR("WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal");
-
-    return this->ApplyOffset(position, offset_);
-  }
-
-  /////////////////////////////////
-  ignition::math::Vector3d DatasetGenerator::ComputeRandRotation()
-  {
-    using namespace ignition::math;
-    Vector3d rotation;
-    Vector3d offset_(10, 10, 0);
-
-    rotation.X() = Rand::DblUniform(0, 2*M_PI);
-    rotation.Y() = Rand::DblUniform(0, 2*M_PI);
-    rotation.Z() = Rand::DblUniform(0, 2*M_PI);
-
-    return rotation;
-  }
-
-  /////////////////////////////////
-  ignition::math::Vector3d DatasetGenerator::ComputeRandomScale()
-  {
-    ignition::math::Vector3d scale;
-    scale.X() = ignition::math::Rand::DblUniform(this->min_scale.X(), this->max_scale.X());
-    scale.Y() = ignition::math::Rand::DblUniform(this->min_scale.Y(), this->max_scale.Y());
-    scale.Z() = ignition::math::Rand::DblUniform(this->min_scale.Z(), this->max_scale.Z());
-
-    return scale;
-  }
-  
-  /////////////////////////////////
-  ignition::math::Vector3d DatasetGenerator::ComputeRandomScale(ignition::math::Vector3d min_scale_, ignition::math::Vector3d max_scale_)
-  {
-    ignition::math::Vector3d scale;
-    scale.X() = ignition::math::Rand::DblUniform(min_scale_.X(), max_scale_.X());
-    scale.Y() = ignition::math::Rand::DblUniform(min_scale_.Y(), max_scale_.Y());
-    scale.Z() = ignition::math::Rand::DblUniform(min_scale_.Z(), max_scale_.Z());
-
-    return scale;
-  }
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  bool DatasetGenerator::ReachPositionOffset(ignition::math::Pose3d pose)
-  {
-    float distance = this->sensor_model->WorldPose().Pos().Distance(pose.Pos());
-
-    if (distance > this->sensor_offset)
-      return true;
-    else
-      return false;
-  }
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  /**
-   * @brief
-   * @param 
-   * @return
-  */
-  bool collisionBbx(ignition::math::AxisAlignedBox box1, ignition::math::AxisAlignedBox box2)
-  {
-    if (box1.Intersects(box2) || box2.Intersects(box1))
-      return true;
-    else
-      return false;
-  }
-
-  /////////////////////////////////
-  ignition::math::Vector3d DatasetGenerator::ApplyOffset(ignition::math::Vector3d input)
-  {
-    ignition::math::Vector3d output;
-
-    for (size_t i = 0; i < 3; i++)
-    {
-      if(input[i] < 0)
-        output[i] = input[i] + this->neg_offset[i];
-      else
-        output[i] = input[i] + this->pos_offset[i];
-    }
-    
-    return output;
-  }
-
-  /////////////////////////////////
-  ignition::math::Vector3d DatasetGenerator::ApplyOffset(ignition::math::Vector3d input, ignition::math::Vector3d offset_)
-  {
-    ignition::math::Vector3d output;
-
-    for (size_t i = 0; i < 3; i++)
-    {
-      if(input[i] < 0)
-        output[i] = input[i] - offset_[i];
-      else
-        output[i] = input[i] + offset_[i];
-    }
-    
-    return output;
-  }
-
-  /**
-   * @brief Aplly rotation to a model
-   * @param model_ptr Pointer to a model in gazebo
-   * @param rotation Rotation vector R P Y
-   */
-  void DatasetGenerator::ApplyRotation(physics::ModelPtr model_ptr, ignition::math::Vector3d rotation)
-  {
-    ignition::math::Pose3d pose;
-
-    pose = model_ptr->WorldPose();
-    this->world->SetPaused(true);
-    pose.Rot().Euler(rotation);
-    model_ptr->SetWorldPose(pose);
-    this->world->SetPaused(false);
-  }
-
-  /////////////////////////////////
-  int DatasetGenerator::GetNumOfItems(fs::path path)
-  {
-    fs::directory_iterator dir_iter(path);
-    return int(std::distance(dir_iter, fs::directory_iterator{}));
-  }
-
-  /////////////////////////////////
-  Eigen::VectorXf DatasetGenerator::SetModelWeights(fs::path path) 
-  {
-    using namespace ignition::math;
-    const int num_models = this->GetNumOfItems(path);
-    Eigen::VectorXf model_weights(num_models);
-
-    for (size_t i = 0; i < num_models; i++)
-      model_weights(i) = Rand::IntUniform(0,100);
-
-    model_weights = model_weights / model_weights.sum();
-
-    return model_weights;
-  }
+ 
 
 
   // ROS

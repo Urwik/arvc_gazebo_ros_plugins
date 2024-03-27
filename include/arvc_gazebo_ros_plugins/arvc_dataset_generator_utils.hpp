@@ -370,34 +370,34 @@ namespace plugin{
             this->lab_mod = labeled(this->num_lbld_models);
 
             // SIMULATION
-            this->simulation.paused = config["simulation"]["paused"].as<bool>();
+            this->simulation.paused     = config["simulation"]["paused"].as<bool>();
             this->simulation.debug_msgs = config["simulation"]["debug_msgs"].as<bool>();
-            this->simulation.log_msgs = config["simulation"]["log_msgs"].as<bool>();
+            this->simulation.log_msgs   = config["simulation"]["log_msgs"].as<bool>();
 
             // SENSORS
             this->sensor.enable = config["sensor"]["enable"].as<bool>();
-            this->sensor.name = config["sensor"]["name"].as<string>();
-            this->sensor.topic = config["sensor"]["topic"].as<string>();
-            this->sensor.path = config["sensor"]["path"].as<string>();
+            this->sensor.name   = config["sensor"]["name"].as<string>();
+            this->sensor.topic  = config["sensor"]["topic"].as<string>();
+            this->sensor.path   = config["sensor"]["path"].as<string>();
             this->sensor.offset = config["sensor"]["offset"].as<im::Vector3d>();
 
             // CAMERAS
             this->camera.enable = config["camera"]["enable"].as<bool>();
-            this->camera.name = config["camera"]["name"].as<string>();
-            this->camera.topic = config["camera"]["topic"].as<string>();
-            this->camera.path = config["camera"]["path"].as<string>();
+            this->camera.name   = config["camera"]["name"].as<string>();
+            this->camera.topic  = config["camera"]["topic"].as<string>();
+            this->camera.path   = config["camera"]["path"].as<string>();
 
             // OUTPUT DATA
-            this->out_data.enable = config["data"]["enable"].as<bool>();
-            this->out_data.out_dir = config["data"]["out_dir"].as<string>();
-            this->out_data.quantity = config["data"]["quantity"].as<int>();
-            this->out_data.pc_binary = config["data"]["pc_binary"].as<bool>();
+            this->out_data.enable       = config["data"]["enable"].as<bool>();
+            this->out_data.out_dir      = config["data"]["out_dir"].as<string>();
+            this->out_data.quantity     = config["data"]["quantity"].as<int>();
+            this->out_data.pc_binary    = config["data"]["pc_binary"].as<bool>();
 
             // ENVIRONMENT
-            this->env.world_model = config["environment"]["world_model"].as<string>();
-            this->env.world_name = config["environment"]["world_name"].as<string>();
-            this->env.insert_models = config["environment"]["insert_models"].as<bool>();
-            this->env.dynamic_models = config["environment"]["dynamic_models"].as<bool>();
+            this->env.world_model       = config["environment"]["world_model"].as<string>();
+            this->env.world_name        = config["environment"]["world_name"].as<string>();
+            this->env.insert_models     = config["environment"]["insert_models"].as<bool>();
+            this->env.dynamic_models    = config["environment"]["dynamic_models"].as<bool>();
 
             for (int i = 0 ; i < this->env.num_env_models  ; i++)
             {

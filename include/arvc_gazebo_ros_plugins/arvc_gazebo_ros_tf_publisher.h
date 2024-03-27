@@ -13,6 +13,7 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <geometry_msgs/TransformStamped.h>
+#include <QPushButton>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
@@ -40,9 +41,11 @@ namespace gazebo
     /// \brief Initialize a ROS node
     public: void RosSetup();
 
+    public: void buttonClicked();
 
     /// \brief Publish tf between model and gazebo world frame
-    private: static void PubThread();
+    private: 
+      void PubThread();
       
 
     // Pointer to the model
