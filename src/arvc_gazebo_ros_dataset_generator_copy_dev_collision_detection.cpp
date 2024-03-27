@@ -904,7 +904,10 @@ namespace gazebo
       }
       // this->SaveCameraSensorTF();
       // this->SaveCameraParams();
-      writer.write<PointT>(ss.str(), *this->pcl_cloud, this->pc_binary);
+      pcl::PointCloud<pcl::PointXYZL>::Ptr labeled_cloud (new pcl::PointCloud<pcl::PointXYZL>);
+      pcl::copyPointCloud(*this->pcl_cloud, *labeled_cloud);
+
+      writer.write<pcl::PointXYZL>(ss.str(), *labeled_cloud, this->config.out_data.pc_binary);
     }
   }
 
@@ -927,8 +930,7 @@ namespace gazebo
   }
 
     /////////////////////////////////
-  void DatasetGenerator::SaveCameraParams()
-  {
+  void DatasetGenerator::SaveCameraParams() {
     ignition::math::Pose3d sensor_pose = this->sensor_model->WorldPose();
 
     Eigen::VectorXd sensor_world_pose(6);
