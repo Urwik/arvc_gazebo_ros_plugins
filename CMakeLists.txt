@@ -97,3 +97,6 @@ target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARI
 
 # add_library(arvc_gazebo_ros_tf_publisher src/arvc_gazebo_ros_tf_publisher.cpp)
 # target_link_libraries( arvc_gazebo_ros_tf_publisher ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} Qt5::Core Qt5::Widgets Qt5::PrintSupport) 
+
+add_library(arvc_gazebo_ros_model_move_v2 src/arvc_gazebo_ros_model_move_v2.cpp)
+target_link_libraries(arvc_gazebo_ros_model_move_v2 ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES} ) 

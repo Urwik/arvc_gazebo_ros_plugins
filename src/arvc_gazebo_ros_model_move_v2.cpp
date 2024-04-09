@@ -4,18 +4,21 @@
 
 namespace gazebo {
 
+GZ_REGISTER_WORLD_PLUGIN(MoveModel)
+
 
 MoveModel::MoveModel() {
   ROS_INFO(RED "CONSTRUCTOR" RESET);
   this->pcl_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>);
-  this->handle_to_model = false;
-  this->env_count = 0;
+  this->callback_count = 0;
 }
-
 
 
 void MoveModel::Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf)
 {
+
+  std::cout << RED << "LOADING PLUGIN..." << RESET << std::endl;
+
   this->world = _parent;
   this->world->SetPhysicsEnabled(false);
 
@@ -34,59 +37,49 @@ void MoveModel::Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf)
 }
 
 
-
-/**
- * @brief Se ejecuta una única vez inmediatamente tras la función Load()
- */
-void MoveModel::Init()
-{ 
-  // gazebo::common::Console::SetQuiet(true);
-  this->fixed_model = this->world->ModelByName(this->fixed_model_name);
-
-  // Get all links of the structure
-  physics::Link_V links = this->fixed_model->GetLinks();
-  for(physics::LinkPtr link : links)
-    this->links_bbx.push_back(link->CollisionBoundingBox());
-}
-
-
-
-/**
- * @brief Hilo que se ejecuta cada vez que se avanza un paso en la simulación
- */
-// void OnUpdate(){ 
-// }
-
-
-
 void MoveModel::GenerateDataset()
 {
 
   while (!this->fixed_model){
-    this->world->ModelByName(this->fixed_model_name);
+    this->fixed_model = this->world->ModelByName(this->fixed_model_name);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
+  ROS_INFO_COND(this->debug_msgs, YELLOW "FIXED MODEL FOUND");
+
+  while (!this->sensor_model){
+    this->sensor_model = this->world->ModelByName(this->sensor_name);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }
+  ROS_INFO_COND(this->debug_msgs, YELLOW "SENSOR MODEL FOUND");
+
+  ROS_INFO_COND(this->debug_msgs, YELLOW "WAITING FOR POINTCLOUD...");
+  while (this->callback_count < 2) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }
+  ROS_INFO_COND(this->debug_msgs, GREEN "POINTCLOUD RECEIVED" RESET);
+
+  physics::Link_V links = this->fixed_model->GetLinks();
+  for(physics::LinkPtr link : links)
+    this->links_bbx.push_back(link->CollisionBoundingBox());
 
   int estado = 0;
+  this->env_count = 0;
 
   while (this->env_count < this->NUM_ENV)
   {
     switch (estado)
     {
     case 0:
-      if(this->MobileModelReady()){
         ROS_INFO(GREEN "STARTING TO MOVE THE MODEL..." RESET);
         std::this_thread::sleep_for(std::chrono::milliseconds(3000));
         estado = 1;
-      }
       break;
 
     case 1:
       ROS_INFO( YELLOW "ENVIROMENT %d" RESET, this->env_count);
       this->MoveMobileModel();
 
-      if(this->paused)
-      {
+      if(this->paused) {
         ROS_INFO(YELLOW "PAUSED: Press enter to continue ..." RESET);
         std::getchar();
       }
@@ -96,7 +89,9 @@ void MoveModel::GenerateDataset()
     
     case 2:
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-      this->SavePointCloud(this->pcl_cloud);
+
+      if (this->save_pcd)
+        this->SavePointCloud(this->pcl_cloud);
       estado = 3;
       break;
       
@@ -126,135 +121,24 @@ void MoveModel::ParseArgs(sdf::ElementPtr sdf)
     std::string yaml_config = sdf->GetElement("yaml_config")->Get<std::string>();
     this->config = YAML::LoadFile(yaml_config);
 
-    this->output_dir  = this->config["plugin"]["out_dir"].as<std::string>();
-    this->NUM_ENV     = this->config["plugin"]["num_env"].as<int>();
-    this->pos_dist    = this->config["plugin"]["positive_dist"].as<ignition::math::Vector3d>();
-    this->neg_dist    = this->config["plugin"]["negative_dist"].as<ignition::math::Vector3d>();
-    this->pc_binary   = this->config["plugin"]["pc_binary"].as<bool>();
-    this->RANDMODE    = this->config["plugin"]["rand_mode"].as<std::string>();
-    this->debug_msgs  = this->config["plugin"]["debug_msgs"].as<bool>();
-    this->paused      = this->config["plugin"]["paused"].as<bool>();
-    this->mobile_model_name = this->config["plugin"]["mobile_model_name"].as<string>();
-    this->fixed_model_name  = this->config["plugin"]["fixed_model_name"].as<string>();
-    this->sensor_topic      = this->config["plugin"]["sensor_topic"].as<string>();
+    this->output_dir        = this->config["common"]["out_dir"].as<std::string>();
+    this->NUM_ENV           = this->config["common"]["num_env"].as<int>();
+    this->save_pcd          = this->config["common"]["save_pcd"].as<bool>();
+    this->pcd_binary        = this->config["common"]["pcd_binary"].as<bool>();
+    this->paused            = this->config["common"]["paused"].as<bool>();
+    this->debug_msgs        = this->config["common"]["debug_msgs"].as<bool>();
+
+    this->fixed_model_name  = this->config["collision"]["model"].as<std::string>();
+
+    this->sensor_name       = this->config["sensor"]["name"].as<std::string>();
+    this->sensor_topic      = this->config["sensor"]["topic"].as<std::string>();
+    this->sensor_offset     = this->config["sensor"]["collision_offset"].as<uint>();
+
+    this->truss_offset      = this->config["poses"]["offset"].as<float>();
+    this->RANDMODE          = this->config["poses"]["rand_mode"].as<std::string>();
   }
-  else
-  {
-
-
-  // PARSE ARGUMENTS
-  if (sdf->HasElement("out_dir")) 
-    this->output_dir = sdf->GetElement("out_dir")->Get<std::string>();
-  else
-    std::cout << RED << "ERROR: out_dir not found" << RESET << std::endl;
-  
-
-  if (sdf->HasElement("NUM_ENV"))
-    this->NUM_ENV = sdf->GetElement("NUM_ENV")->Get<int>();
-  else
-    std::cout << RED << "ERROR: NUM_ENV not found" << RESET << std::endl; 
-  
-
-  if (sdf->HasElement("positive_dist"))
-    this->pos_dist = sdf->GetElement("positive_dist")->Get<ignition::math::Vector3d>();
-  else
-    std::cout << RED << "ERROR: positive_dist not found" << RESET << std::endl;
-
-  if (sdf->HasElement("negative_dist"))
-    this->neg_dist = sdf->GetElement("negative_dist")->Get<ignition::math::Vector3d>();
-  else
-    std::cout << RED << "ERROR: negative_dist not found" << RESET << std::endl;
-
-  if (sdf->HasElement("pc_binary"))
-    this->pc_binary = sdf->GetElement("pc_binary")->Get<bool>();
-  else
-    std::cout << RED << "ERROR: pc_binary not found" << RESET << std::endl;
-
-
-  if (sdf->HasElement("rand_mode"))
-    this->RANDMODE = sdf->GetElement("rand_mode")->Get<std::string>();
-  else
-    std::cout << RED << "ERROR: rand_mode not found" << RESET << std::endl;
-
-
-  if (sdf->HasElement("debug_msgs"))
-    this->debug_msgs = sdf->GetElement("debug_msgs")->Get<bool>();
-  else
-    std::cout << RED << "ERROR: debug_msgs not found" << RESET << std::endl;
-
-  // PAUSES THE PROGRAM UNTIL USER PRESS ENTER
-  if (sdf->HasElement("paused"))
-    this->paused = sdf->GetElement("paused")->Get<bool>();
-  else
-    std::cout << RED << "ERROR: paused not found" << RESET << std::endl;
-
-  // Gets the model name
-  if (sdf->HasElement("mobile_model_name"))
-    this->mobile_model_name = sdf->GetElement("mobile_model_name")->Get<string>();
-  else
-    std::cout << RED << "ERROR: mobile_model_name not found" << RESET << std::endl;
-
-  // Gets the model name
-  if (sdf->HasElement("fixed_model_name"))
-    this->fixed_model_name = sdf->GetElement("fixed_model_name")->Get<string>();
-  else
-    std::cout << RED << "ERROR: fixed_model_name not found" << RESET << std::endl;
-
-  // Gets the model name
-  if (sdf->HasElement("sensor_topic"))
-    this->sensor_topic = sdf->GetElement("sensor_topic")->Get<string>();
-  else
-    std::cout << RED << "ERROR: sensor_topic not found" << RESET << std::endl;
-
-  }
-}
-
-
-bool MoveModel::GetModelPointer()
-{
-  ROS_INFO_COND(this->debug_msgs, YELLOW "TRYING TO GET MOBILE MODEL: %s" RESET, this->mobile_model_name.c_str());
-  this->mobile_model = this->world->ModelByName(this->mobile_model_name);
-
-  if(!this->mobile_model)
-    return false;
-  else
-  {
-    ROS_INFO(BLUE "HANDLE TO MODEL OBTAINED CORRECTLY" RESET);
-    this->handle_to_model = true;
-    return true;
-  }
-}
-
-
-
-
-
-/**
- * @brief Get a pointer to an SDF file.
- * @param sdfPath Absolute path to the model file.
- * @return Return an sdf::SDFPtr to the file.
- */
-sdf::SDFPtr MoveModel::GetSDFfile(fs::path sdfPath)
-{
-
-  sdf::SDFPtr sdf_File (new sdf::SDF());
-  sdf::init(sdf_File);
-  sdf::readFile(sdfPath, sdf_File);
-
-  return sdf_File;
-}
-
-
-
-bool MoveModel::MobileModelReady()
-{
-  ROS_INFO_COND(this->debug_msgs, "CHECKING IF MOBILE MODEL IS READY");
-  if(!this->world->ModelByName(this->mobile_model_name))
-    return false;
-  else
-  {
-    ROS_INFO(GREEN "MOBILE MODEL IS READY" RESET);
-    return true;
+  else {
+    std::cout << RED << "Param yaml_config inside plugin declaration" << RESET << std::endl;
   }
 }
 
@@ -264,10 +148,22 @@ void MoveModel::MoveMobileModel()
 {
   ROS_INFO_COND(this->debug_msgs, YELLOW "MOVING MODEL..." RESET);
 
-  ignition::math::Pose3d pose = utils::ComputeRandomPose(this->RANDMODE);
+  ignition::math::AxisAlignedBox truss_bbx = this->fixed_model->BoundingBox();
+  ignition::math::Vector3d truss_min = truss_bbx.Min();
+  ignition::math::Vector3d truss_max = truss_bbx.Max();
+  float offset = 2.0;
+
+  ignition::math::Pose3d pose;
+  pose = utils::ComputeRandomPose(this->RANDMODE, truss_min, truss_max, offset);
+  
   this->world->SetPaused(true);
-  this->mobile_model->SetWorldPose(pose);
+  this->sensor_model->SetWorldPose(pose);
   this->world->SetPaused(false);
+
+  ignition::math::AxisAlignedBox bbx = this->sensor_model->BoundingBox();
+
+
+
   ROS_INFO_COND(this->debug_msgs, YELLOW "MODEL MOVED" RESET);
 
 }
@@ -307,7 +203,20 @@ void MoveModel::SavePointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud)
   ss << this->pcd_dir.string() << "/" << std::setfill('0') << std::setw(5)  << this->env_count << ".pcd";
   ROS_INFO_COND(this->debug_msgs, "SAVING POINTCLOUD IN %s", ss.str().c_str());
 
-  if(cloud->points.size() != cloud->width)
+
+
+  pcl::PointCloud<pcl::PointXYZL>::Ptr cloud_labeled (new pcl::PointCloud<pcl::PointXYZL>);
+  pcl::copyPointCloud(*cloud, *cloud_labeled);
+
+  for (int i = 0; i < cloud_labeled->points.size(); i++)
+    cloud_labeled->points[i].label = cloud->points[i].intensity;
+
+  if (!cloud_labeled->empty())
+    writer.write<pcl::PointXYZL>(ss.str(), *cloud_labeled, this->pcd_binary);
+
+
+  // OLD WAY
+/*   if(cloud->points.size() != cloud->width)
   {
     int cloud_size = cloud->points.size();
     cloud->width = cloud_size;
@@ -315,7 +224,9 @@ void MoveModel::SavePointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud)
   }
   
   if(!cloud->empty())
-    writer.write<pcl::PointXYZI>(ss.str(), *cloud, this->pc_binary);
+    writer.write<pcl::PointXYZI>(ss.str(), *cloud, this->pcd_binary);
+ */
+
 }
 
 
@@ -325,10 +236,10 @@ void MoveModel::CheckOutputDirs()
   this->pcd_dir = this->output_dir / "pcd";
 
   if(!fs::exists(this->output_dir))
-    fs::create_directory(this->output_dir);
+    fs::create_directories(this->output_dir);
 
   if(!fs::exists(this->pcd_dir))
-    fs::create_directory(this->pcd_dir);
+    fs::create_directories(this->pcd_dir);
 
 
   ROS_INFO_COND(this->debug_msgs, BLUE "PointClouds Output Directory:" RESET);
@@ -346,7 +257,8 @@ void MoveModel::PointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& inp
   pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cloud (new pcl::PointCloud<pcl::PointXYZI>);
   pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
 
-  *pcl_cloud = *temp_cloud;
+  *this->pcl_cloud = *temp_cloud;
+  this->callback_count++;
 }
 
 
@@ -354,16 +266,13 @@ void MoveModel::PointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& inp
  * @brief Check that pose dont lies inside truss structure
  * @return Return true if pose is valid
  */
-bool MoveModel::ValidPose(ignition::math::Pose3d pose)
+bool MoveModel::ValidPose(ignition::math::AxisAlignedBox _sensor_bbx)
 {
   using namespace ignition::math;
 
-  Vector3d position = pose.Pos();
+  for (AxisAlignedBox bbx : this->links_bbx) {
 
-  for (AxisAlignedBox bbx : this->links_bbx)
-  {
-    if(bbx.Contains(position))
-    {
+    if(bbx.Intersects(_sensor_bbx)) {
       ROS_INFO_COND(this->debug_msgs, RED "INVALID POSE COMPUTED, RECOMPUTING..." RESET);
       return false;
     }
@@ -371,7 +280,6 @@ bool MoveModel::ValidPose(ignition::math::Pose3d pose)
   
   return true;
 }
-
 
 
 
@@ -385,8 +293,4 @@ void MoveModel::QueueThread()
 }
 
 
-};
-
-// Register this plugin with the simulator
-// GZ_REGISTER_WORLD_PLUGIN(MoveModel)
-}
+}; // namespace gazebo

@@ -30,6 +30,7 @@
 
 #include <ignition/math/Pose3.hh>
 #include <ignition/math/Vector3.hh>
+#include <ignition/math/Box.hh>
 
 // PCL
 #include <pcl/io/pcd_io.h>
@@ -71,21 +72,6 @@ class MoveModel : public WorldPlugin
   void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf); 
 
 
-////////////////////////////////////////////////////////////////////////////////
-  /**
-   * @brief Se ejecuta una única vez inmediatamente tras la función Load()
-   */
-
-  void Init();
-
-
-////////////////////////////////////////////////////////////////////////////////
-  /**
-   * @brief Hilo que se ejecuta cada vez que se avanza un paso en la simulación
-   */
-  private: 
-  void OnUpdate();
-
 
 ////////////////////////////////////////////////////////////////////////////////
   void GenerateDataset();
@@ -97,20 +83,6 @@ class MoveModel : public WorldPlugin
 
   /////////////////////////////////
   void GetYamlConfig();
-
-
-////////////////////////////////////////////////////////////////////////////////
-  bool GetModelPointer();
-
-
-
-////////////////////////////////////////////////////////////////////////////////
-  /**
-   * @brief Get a pointer to an SDF file.
-   * @param sdfPath Absolute path to the model file.
-   * @return Return an sdf::SDFPtr to the file.
-   */
-  sdf::SDFPtr GetSDFfile(fs::path sdfPath);
 
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -139,12 +111,9 @@ class MoveModel : public WorldPlugin
 ////////////////////////////////////////////////////////////////////////////////
   void QueueThread();
 
-////////////////////////////////////////////////////////////////////////////////
-  /**
-   * @brief Check that pose dont lies inside truss structure
-   * @return Return true if pose is valid
-   */
-  bool ValidPose(ignition::math::Pose3d pose);
+
+  bool ValidPose(ignition::math::AxisAlignedBox _sensor_bbx);
+
 
 
 
@@ -156,35 +125,30 @@ class MoveModel : public WorldPlugin
   private:
     physics::WorldPtr world;
     physics::ModelPtr mobile_model;
+    physics::ModelPtr sensor_model;
     std::vector<physics::ModelPtr> collisionable_models;
     physics::ModelPtr fixed_model;
     event::ConnectionPtr updateConnection;
-
-    // SENSORS    
-    physics::ModelPtr sensor_model;
 
     // CONFIGURATION
     YAML::Node config;
     std::string RANDMODE;
     int NUM_ENV;
     //  int NUM_MODELS;
-    std::filesystem::path env_dir;
-    std::filesystem::path models_dir;
     std::filesystem::path output_dir;
     std::filesystem::path pcd_dir;
     std::string world_name;
-    std::string mobile_model_name;
     std::string fixed_model_name;
     std::string sensor_name;
     std::string sensor_topic;
-    ignition::math::Vector3d pos_offset;
-    ignition::math::Vector3d neg_offset;
-    ignition::math::Vector3d pos_dist;
-    ignition::math::Vector3d neg_dist;
-    ignition::math::Vector3d min_scale;
-    ignition::math::Vector3d max_scale;
-    bool pc_binary;
 
+    bool save_pcd;
+    bool pcd_binary;
+
+    uint sensor_offset;
+
+    ignition::math::Vector3d origin;
+    float range;
 
     // ROS
     ros::NodeHandle* ros_node;
@@ -200,17 +164,15 @@ class MoveModel : public WorldPlugin
 
     // HELPERS
     bool debug_msgs;
-    bool ousterReady;
-    bool handle_to_model;
     int env_count;
-    int laser_retro;
     bool paused;
     boost::thread generator_thread;
     std::vector<ignition::math::AxisAlignedBox> links_bbx;
+    int callback_count;
+    float truss_offset;
 
 };
 
-GZ_REGISTER_WORLD_PLUGIN(MoveModel)
 }
 
 

@@ -1,0 +1,19 @@
+common: 
+  out_dir: "/media/arvc/data/datasets/TEST_GENERATOR"
+  num_env: 1000
+  save_pcd: true
+  pcd_binary: true
+  paused: true
+  debug_msgs: true
+
+collision:
+  model: "reticular_structure" # model to compute the collisions with the sensor
+
+sensor:
+  name: "os_128"
+  topic: "/os1/pointCloud"
+  collision_offset: 1 # % to increase the collision box of the original sensor
+
+poses:
+  offset: 10.0
+  rand_mode: uniform # uniform, gaussian
