@@ -63,6 +63,7 @@ void MoveModel::GenerateDataset()
     this->links_bbx.push_back(link->CollisionBoundingBox());
 
   int estado = 0;
+  int current_num = 0;
   this->env_count = 0;
 
   while (this->env_count < this->NUM_ENV)
@@ -71,6 +72,9 @@ void MoveModel::GenerateDataset()
     {
     case 0:
         ROS_INFO(GREEN "STARTING TO MOVE THE MODEL..." RESET);
+        current_num = utils::ResumeEnvCount(this->pcd_dir);
+        if(current_num > 0)
+          this->env_count = current_num + 1;
         std::this_thread::sleep_for(std::chrono::milliseconds(3000));
         estado = 1;
       break;

@@ -82,4 +82,38 @@ ignition::math::Pose3d ComputeRandomPose(std::string _mode, ignition::math::Vect
     return pose;
 }
 
+  /// @brief Get last saved cloud count and continue from that number
+  int ResumeEnvCount(fs::path _pcd_dir) {
+
+    bool first_entry = true;
+    int last_num = 0;
+
+    if (!fs::is_empty(_pcd_dir)) {
+      
+      for (const fs::directory_entry entry : fs::directory_iterator(_pcd_dir)) {
+        if(entry.path().extension() == ".pcd") {
+          try{
+            int actual_num = std::stoi(entry.path().stem());
+
+            if(actual_num > last_num)
+              last_num = actual_num;
+          }
+
+          catch(const std::exception& e){
+            ROS_WARN("CAN'T READ FILE: %s", entry.path().string().c_str());
+          }
+        }
+      }
+
+      ROS_INFO( "Starting in Env: %d", last_num);
+      return last_num;
+    }
+    else {
+      ROS_INFO( "Starting in Env: %d", last_num);
+      return last_num;
+    }
+  }
+
+
+
 } // namespace utils
