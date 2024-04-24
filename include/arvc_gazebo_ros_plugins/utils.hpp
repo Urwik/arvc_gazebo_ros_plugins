@@ -54,10 +54,18 @@ ignition::math::Pose3d ComputeRandomPose(std::string _mode, ignition::math::Vect
     Vector3d position;
     Vector3d rotation;
 
+    auto now = std::chrono::system_clock::now();
+    auto epoch = now.time_since_epoch();
+    auto value = std::chrono::duration_cast<std::chrono::seconds>(epoch);
+    long duration = value.count();
+    int seed = static_cast<int>(duration);
+
+    Rand::Seed(seed);
+
     if (_mode == "uniform") {
-        position.X() = Rand::DblUniform(_min.X() + _offset, _max.X() - _offset); 
-        position.Y() = Rand::DblUniform(_min.Y() + _offset, _max.Y() - _offset); 
-        position.Z() = Rand::DblUniform(_min.Z() + _offset, _max.Z() - _offset); 
+        position.X() = Rand::DblUniform(_min.X(), _max.X()); 
+        position.Y() = Rand::DblUniform(_min.Y(), _max.Y()); 
+        position.Z() = Rand::DblUniform(_min.Z() + _offset, _max.Z()); 
         
         rotation.X() = Rand::DblUniform(0, 2*M_PI);
         rotation.Y() = Rand::DblUniform(0, 2*M_PI);

@@ -146,6 +146,7 @@ class MoveModel : public WorldPlugin
     bool pcd_binary;
 
     uint sensor_offset;
+    float rand_poses_offset;
 
     ignition::math::Vector3d origin;
     float range;

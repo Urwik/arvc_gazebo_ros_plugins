@@ -22,6 +22,7 @@ find_package (Qt5Core REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Qt5 COMPONENTS Core Gui Widgets PrintSupport)
+find_package(Threads REQUIRED)
 # find_package(SDFormat REQUIRED)
 
 
@@ -100,3 +101,6 @@ target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARI
 
 add_library(arvc_gazebo_ros_model_move_v2 src/arvc_gazebo_ros_model_move_v2.cpp)
 target_link_libraries(arvc_gazebo_ros_model_move_v2 ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES} ) 
+
+# add_library(model_collision_detector src/arvc_gazebo_model_collision_detector.cpp)
+# target_link_libraries(model_collision_detector ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES})

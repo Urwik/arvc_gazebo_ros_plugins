@@ -3,40 +3,15 @@
 #include <algorithm>
 #include <math.h>
 
-//MULTITHREADING
-// #include <thread>
-// #include <mutex>
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
-
-#include <ros/ros.h>
-#include <ros/package.h>
-#include <ros/callback_queue.h>
-#include <ros/subscribe_options.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <rosgraph_msgs/Log.h>
-
 
 #include <gazebo/gazebo.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/sensors/sensors.hh>
-#include <gazebo/sensors/CameraSensor.hh>
-#include <gazebo/gui/gui.hh>
-#include <gazebo/rendering/rendering.hh>
-#include <gazebo/transport/Node.hh>
-#include <gazebo/msgs/msgs.hh>
-#include <gazebo/common/common.hh>
+
 #include <ignition/math/Pose3.hh>
 #include <ignition/math/Vector3.hh>
-
-#include <Eigen/Eigen>
-
-// PCL
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl/PCLPointCloud2.h>
 
 #include <sdf/sdf.hh>
 
@@ -50,10 +25,6 @@ using namespace std;
 #define BLUE    "\033[34m"
 
 
-
-// Type Definitions ////////////////////////////////////////////////////////////
-typedef pcl::PointXYZI PointT;
-typedef pcl::PointCloud<PointT> PointCloud;
 
 namespace gazebo
 {

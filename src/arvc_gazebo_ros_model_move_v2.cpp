@@ -140,6 +140,7 @@ void MoveModel::ParseArgs(sdf::ElementPtr sdf)
 
     this->truss_offset      = this->config["poses"]["offset"].as<float>();
     this->RANDMODE          = this->config["poses"]["rand_mode"].as<std::string>();
+    this->rand_poses_offset = this->config["poses"]["offset"].as<float>();
   }
   else {
     std::cout << RED << "Param yaml_config inside plugin declaration" << RESET << std::endl;
@@ -152,24 +153,29 @@ void MoveModel::MoveMobileModel()
 {
   ROS_INFO_COND(this->debug_msgs, YELLOW "MOVING MODEL..." RESET);
 
+  bool pose_valid = false;
+
   ignition::math::AxisAlignedBox truss_bbx = this->fixed_model->BoundingBox();
   ignition::math::Vector3d truss_min = truss_bbx.Min();
   ignition::math::Vector3d truss_max = truss_bbx.Max();
-  float offset = 2.0;
 
   ignition::math::Pose3d pose;
-  pose = utils::ComputeRandomPose(this->RANDMODE, truss_min, truss_max, offset);
+
+  while (!pose_valid) {
+    pose = utils::ComputeRandomPose(this->RANDMODE, truss_min, truss_max, this->rand_poses_offset);
+    
+    this->world->SetPaused(true);
+    this->sensor_model->SetWorldPose(pose);
+    this->world->SetPaused(false);
+
+    ignition::math::AxisAlignedBox bbx = this->sensor_model->BoundingBox();
+
+    pose_valid = this->ValidPose(bbx);
+  }
   
-  this->world->SetPaused(true);
-  this->sensor_model->SetWorldPose(pose);
-  this->world->SetPaused(false);
-
-  ignition::math::AxisAlignedBox bbx = this->sensor_model->BoundingBox();
-
 
 
   ROS_INFO_COND(this->debug_msgs, YELLOW "MODEL MOVED" RESET);
-
 }
 
 
