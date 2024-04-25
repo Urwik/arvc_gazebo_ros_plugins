@@ -10,7 +10,7 @@ namespace im = ignition::math;
 namespace utils
 {
 
-    sdf::SDFPtr GetSDFfile(fs::path sdfPath)
+    sdf::SDFPtr getSDFfile(fs::path sdfPath)
     {
         if (!fs::exists(sdfPath))
         {
@@ -25,7 +25,25 @@ namespace utils
         return sdf_file;
     }
 
-    fs::path GetTemporarySDFfile(fs::path orig_path)
+    fs::path getTemporarySDFfile(fs::path orig_path)
+    {
+        if (!fs::exists(orig_path))
+        {
+            std::cerr << "File does not exist: " << orig_path << std::endl;
+            return "";
+        }
+
+        fs::path new_model_path = orig_path.parent_path() / "temp_model.sdf";
+        fs::path new_config_path = orig_path.parent_path() / "temp_model.config";
+        fs::path orig_config_path = orig_path.parent_path() / "model.config";
+
+        fs::copy_file(orig_path, new_model_path, fs::copy_options::overwrite_existing);
+        fs::copy_file(orig_config_path, new_config_path, fs::copy_options::overwrite_existing);
+
+        return new_model_path;
+    }
+
+    fs::path copySDFfile(fs::path orig_path)
     {
         if (!fs::exists(orig_path))
         {
@@ -44,13 +62,9 @@ namespace utils
     }
 
 
-    void setModelName(sdf::ElementPtr modelElement, std::string _model_name, int cnt)
+    void setModelName(sdf::ElementPtr modelElement, std::string _model_name)
     {
-        std::stringstream ss;
-        ss.str("");
-        ss << _model_name << '_' << cnt;
-
-        modelElement->GetAttribute("name")->Set(ss.str());
+        modelElement->GetAttribute("name")->Set(_model_name);
     }
 
     /////////////////////////////////
@@ -145,7 +159,7 @@ namespace utils
     }
 
     /////////////////////////////////
-    void setLaserRetro(sdf::ElementPtr model, const int value)
+    void setLaserRetroForVisualElement(sdf::ElementPtr model, const int start_value)
     {
         sdf::ElementPtr linkElement = model->GetElement("link");
         sdf::ElementPtr visualElement = linkElement->GetElement("visual");
@@ -153,7 +167,7 @@ namespace utils
         while (visualElement)
         {
             sdf::ElementPtr retroElement = visualElement->GetElement("laser_retro");
-            retroElement->Set<int>(value);
+            retroElement->Set<int>(start_value);
 
             visualElement = visualElement->GetNextElement("visual");
         }

@@ -23,7 +23,7 @@
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/sensors/sensors.hh>
-#include <gazebo/gui/gui.hh>
+// #include <gazebo/gui/gui.hh>
 #include <gazebo/transport/Node.hh>
 #include <gazebo/msgs/msgs.hh>
 #include <gazebo/common/common.hh>

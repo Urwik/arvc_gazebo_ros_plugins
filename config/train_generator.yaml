@@ -1,27 +1,38 @@
-gazebo:
-  physics:
-
-debug:
-  enable: false
+physics: false
+debug: false
 
 generator:
   paused: false
   iteration_delay: 1000 #ms
   items_to_generate: 10000
   data:
-    out_dir: ""
     save: true
+    out_dir: ""
     binary: true
 
 sensor:
   name: "os1"
-  topic: "os1/pointcloud"
-  model_path: ""
+  topic: "os1/pointcloud" #debe coincidir con el topic del sensor en el archivo sdf del sensor
+  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/OUSTER_OS1"
   collision_offset: 0.05 #m
 
-paralepipeds:
+paralellepipeds:
   item_count: 50
+  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/BASE_MODELS/simple_block_v2"
   lenght: [0.1, 0.5]
   width: [0.05, 0.3]
   height: [0.05, 0.3]
+  position:
+    min: [-10, -10, 0.1]
+    max: [10, 10, 0.1]
 
+environment:
+  item_count: 50
+  model_path: ""
+  change_each_iteration: false
+  lenght: [0.1, 0.5]
+  width: [0.05, 0.3]
+  height: [0.05, 0.3]
+  position:
+    min: [-10, -10, 0.1]
+    max: [10, 10, 0.1]
