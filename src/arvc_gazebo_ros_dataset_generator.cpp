@@ -51,6 +51,7 @@ namespace gazebo
     this->insertSensorModel();
 
     // Wait for the sensor to be ready
+    this->console.debug("Waiting for sensor model to be ready...");
     while (!this->sensor_model)
     {
       mtx.lock();
@@ -58,6 +59,7 @@ namespace gazebo
       mtx.unlock();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    this->console.debug("Sensor model is ready", GREEN);
 
     std::vector<std::string> env_models_;
     std::vector<std::string> par_models_;
@@ -81,7 +83,7 @@ namespace gazebo
         this->console.info("GENERATING RANDOM ENVIROMENT..." + std::to_string(this->env_count));
         // this->MoveGroundModel();
         this->rotateSensorModel();
-        env_models_ = this->SpawnRandomEnviroment();
+        env_models_     = this->SpawnRandomEnviroment();
         par_models_     = this->SpawnRandomParalellepipeds();
 
         all_models_.clear();
@@ -147,11 +149,14 @@ namespace gazebo
     }
     else {
       std::cout << RED << "Param yaml_config inside plugin declaration" << RESET << std::endl;
-    } 
+    }
+
+    this->console.enable = this->config["debug"].as<bool>(); 
   }
 
   void DatasetGenerator::insertSensorModel(){
 
+    this->console.debug("INSERTING SENSOR MODEL...");
     sdf::SDFPtr sensor_sdf = utils::getSDFfile(this->config["sensor"]["model_path"].as<std::string>());
     sdf::ElementPtr sensor_element = sensor_sdf->Root()->GetElement("model");
 
@@ -163,7 +168,7 @@ namespace gazebo
     float current_length = cylinder_elem->GetElement("length")->Get<float>();
 
     float new_radius = this->config["sensor"]["collision_offset"].as<float>() + current_radius;
-    float new_length = this->config["sensor"]["collision_length"].as<float>() + current_length;
+    float new_length = this->config["sensor"]["collision_offset"].as<float>() + current_length;
 
     cylinder_elem->GetElement("radius")->Set(new_radius);
     cylinder_elem->GetElement("length")->Set(new_length);
