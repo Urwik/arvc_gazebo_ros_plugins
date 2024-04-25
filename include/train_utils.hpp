@@ -1,0 +1,113 @@
+#include <gazebo/gazebo.hh>
+#include <gazebo/physics/physics.hh>
+
+namespace im = ignition::math;
+
+namespace utils
+{
+
+    void setModelPose(gazebo::physics::ModelPtr model, im::Pose3d pose)
+    {
+        model->SetWorldPose(pose);
+    }
+
+    im::Vector3d computeRandomScale(im::Vector3d min_scale, im::Vector3d max_scale, std::string rand_mode)
+    {
+        im::Vector3d scale;
+
+        if (rand_mode == "uniform")
+        {
+            scale.X() = im::Rand::DblUniform(min_scale.X(), max_scale.X());
+            scale.Y() = im::Rand::DblUniform(min_scale.Y(), max_scale.Y());
+            scale.Z() = im::Rand::DblUniform(min_scale.Z(), max_scale.Z());
+        }
+        else if (rand_mode == "normal")
+        {
+            scale.Y() = im::Rand::DblNormal(0, max_scale.X() / 3); // 3 is a factor to adjust standard deviation
+            scale.Z() = im::Rand::DblNormal(0, max_scale.Y() / 3);
+            scale.X() = im::Rand::DblNormal(0, max_scale.Z() / 3);
+        }
+        else
+            std::cout << "WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal" << std::endl;
+
+        return scale;
+    }
+
+    im::Vector3d computeRandomPosition(im::Vector3d min, im::Vector3d max, std::string rand_mode)
+    {
+        im::Vector3d position;
+
+        if (rand_mode == "uniform")
+        {
+            position.X() = im::Rand::DblUniform(min.X(), max.X());
+            position.Y() = im::Rand::DblUniform(min.Y(), max.Y());
+            position.Z() = im::Rand::DblUniform(min.Z(), max.Z());
+        }
+        else if (rand_mode == "normal")
+        {
+            position.Y() = im::Rand::DblNormal(0, max.X() / 3); // 3 is a factor to reduce the standard deviation
+            position.Z() = im::Rand::DblNormal(0, max.Y() / 3);
+            position.X() = im::Rand::DblNormal(0, max.Z() / 3);
+        }
+        else
+            std::cout << "WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal" << std::endl;
+
+        return position;
+    }
+
+    im::Vector3d computeRandomRotation(im::Vector3d rotation_range, std::string rand_mode)
+    {
+        im::Vector3d rotation;
+
+        if (rand_mode == "uniform")
+        {
+            rotation.X() = im::Rand::DblUniform(0, rotation_range.X() * (2 * M_PI / 360));
+            rotation.Y() = im::Rand::DblUniform(0, rotation_range.Y() * (2 * M_PI / 360));
+            rotation.Z() = im::Rand::DblUniform(0, rotation_range.Z() * (2 * M_PI / 360));
+        }
+        else if (rand_mode == "normal")
+        {
+            rotation.Y() = im::Rand::DblNormal(0, rotation_range.X() * (2 * M_PI / 360) / 3); // 3 is a factor to reduce the standard deviation
+            rotation.Z() = im::Rand::DblNormal(0, rotation_range.Y() * (2 * M_PI / 360) / 3);
+            rotation.X() = im::Rand::DblNormal(0, rotation_range.Z() * (2 * M_PI / 360) / 3);
+        }
+        else
+            std::cout << "WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal" << std::endl;
+
+        return rotation;
+    }
+
+    im::Pose3d computeRandomPose(im::Vector3d trans_min, im::Vector3d trans_max, im::Vector3d rotation_range, std::string rand_mode)
+    {
+        im::Pose3d pose;
+        im::Vector3d position;
+        im::Vector3d rotation;
+
+        position = computeRandomPosition(trans_min, trans_max, rand_mode);
+        rotation = computeRandomRotation(rotation_range, rand_mode);
+
+        pose.Set(position, rotation);
+
+        return pose;
+    }
+
+
+
+
+
+
+    // //////////////////////////////////////////////////////////////////////////////
+    // /// @brief Moves groud model randomly
+    // void MoveGroundModel()
+    // {
+    //     ROS_INFO_COND(this->config.simulation.debug_msgs, "MOVING GROUND MODEL");
+    //     physics::ModelPtr world_model = this->world->ModelByName(this->config.env.world_name);
+    //     im::Pose3d pose = this->ComputeWorldRandomPose();
+
+    //     // To use SetWorldPose is recommendable pause the world
+    //     this->world->SetPaused(true);
+    //     world_model->SetWorldPose(pose);
+    //     this->world->SetPaused(false);
+    // }
+
+} // namespace utils
