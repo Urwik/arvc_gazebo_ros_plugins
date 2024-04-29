@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <math.h>
 
-// #include <boost/thread.hpp>
-// #include <boost/bind.hpp>
+#include <boost/thread.hpp>
+#include <boost/bind.hpp>
 #include <yaml-cpp/yaml.h>
 
 // GAZEBO
@@ -101,6 +101,9 @@ namespace gazebo
 
     /// @brief Insert unlabeled models as a perturbations to the world
     std::vector<std::string> SpawnRandomEnviroment();
+
+
+  void moveDownTillCollisionWithGround(std::vector<std::string>  model_name);
 
 
     /// @brief Check output directories format, and create if don't exists

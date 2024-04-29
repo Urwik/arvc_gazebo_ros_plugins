@@ -135,6 +135,7 @@ namespace utils
 
         sdf::ElementPtr linkElement = model->GetElement("link");
         sdf::ElementPtr visualElement = linkElement->GetElement("visual");
+        sdf::ElementPtr collisionElement = linkElement->GetElement("collision");
         sdf::ElementPtr scaleElement;
 
         while (visualElement)
@@ -151,11 +152,28 @@ namespace utils
                                    ->GetElement("mesh")
                                    ->GetElement("scale");
             }
-
             scaleElement->Set<im::Vector3d>(scale);
-
             visualElement = visualElement->GetNextElement("visual");
         }
+
+
+        // while (collisionElement)
+        // {
+        //     sdf::ElementPtr sizeElement = collisionElement->GetElement("geometry")->GetElement("box")->GetElement("size");
+        //     sdf::ElementPtr poseElement = collisionElement->GetElement("pose");          
+
+        //     im::Pose3d pose = poseElement->Get<im::Pose3d>();
+        //     pose.Pos() = pose.Pos() * scale;
+
+        //     im::Vector3d size = sizeElement->Get<im::Vector3d>();
+        //     size = size * scale;
+
+        //     sizeElement->Set<im::Vector3d>(size);
+        //     poseElement->Set<im::Pose3d>(pose);
+
+        //     collisionElement = collisionElement->GetNextElement("collision");
+        // }
+
     }
 
     /////////////////////////////////

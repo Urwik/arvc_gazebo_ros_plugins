@@ -2,6 +2,7 @@
 #include "sdf_utils.hpp"
 #include "train_utils.hpp"
 #include "yaml_conversions.hpp"
+#include "timer_utils.hpp"
 
 using namespace std;
 
@@ -42,99 +43,103 @@ namespace gazebo
     this->console.info("ARVC GAZEBO SPAWNMODEL PLUGIN LOADED", GREEN);
   }
 
-  // MAIN FUNCTION
   //////////////////////////////////////////////////////////////////////////////
+  // MAIN FUNCTION
   void DatasetGenerator::GenerateDataset()
   {
     std::mutex mtx;
 
-    this->insertSensorModel();
+    this->world->Reset();
+    this->world->SetPhysicsEnabled(this->config["physics"].as<bool>());
 
-    // Wait for the sensor to be ready
-    this->console.debug("Waiting for sensor model to be ready...");
-    while (!this->sensor_model)
-    {
-      mtx.lock();
-      this->sensor_model = this->world->ModelByName(this->config["sensor"]["name"].as<std::string>());
-      mtx.unlock();
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    this->console.debug("Sensor model is ready", GREEN);
+    // this->insertSensorModel();
 
-    std::vector<std::string> env_models_;
-    std::vector<std::string> par_models_;
-    std::vector<std::string> all_models_;
+    std::vector<std::string> env_models;
+    std::vector<std::string> par_models;
+    std::vector<std::string> all_models;
 
-    int estado = 0;
     gazebo::common::Console::SetQuiet(true);
+
+    bool first_run = true;
+    int env_change_iteration = this->config["environment"]["change_iteration"].as<int>();
+    int par_change_iteration = this->config["paralellepipeds"]["change_iteration"].as<int>();
+    int env_change_counter = 0;
+    int par_change_counter = 0;
 
     while (this->env_count < this->config["generator"]["items_to_generate"].as<int>())
     {
-      switch (estado)
-      {
-      case 0:
-        this->console.info("STARTING TO SPAWN MODELS...");
+
+      if (first_run) {
+        this->console.info("FIRST ENVIRONMENT GENERATION STARTING TO SPAWN MODELS...");
         this->ResumeEnvCount();
-        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-        estado = 1;
-        break;
-
-      case 1:
-        this->console.info("GENERATING RANDOM ENVIROMENT..." + std::to_string(this->env_count));
-        // this->MoveGroundModel();
-        this->rotateSensorModel();
-        env_models_     = this->SpawnRandomEnviroment();
-        par_models_     = this->SpawnRandomParalellepipeds();
-
-        all_models_.clear();
-        all_models_.resize(env_models_.size() + par_models_.size());
-        std::set_union(env_models_.begin(), env_models_.end(), par_models_.begin(), par_models_.end(), all_models_.begin());
-
-        this->console.debug("Parallelepipeds spawned: " + std::to_string(par_models_.size()));
-        this->console.debug("Enviroment spawned: " + std::to_string(env_models_.size()));
-
-        estado = 2;
-        break;
-
-      case 2:
-        if (this->CheckSpawnedModels(all_models_))
-        {
-          if (this->config["generator"]["paused"].as<bool>())
-          {
-            this->console.info("## PAUSED: Press enter to continue ...", YELLOW);
-            std::getchar();
-          }
-          estado = 3;
+        this->insertSensorModel();
+        env_models = this->SpawnRandomEnviroment();
+        if (this->config["generator"]["paused"].as<bool>()) {
+          this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
+          std::getchar();
         }
-        break;
+        this->moveDownTillCollisionWithGround(env_models); // TODO
+        
+        if (this->config["generator"]["paused"].as<bool>()) {
+          this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
+          std::getchar();
+        }
+        env_change_counter++;
+        par_models = this->SpawnRandomParalellepipeds();
+        par_change_counter++;
 
-      case 3:
+        if (this->config["generator"]["paused"].as<bool>()) {
+          this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
+          std::getchar();
+        }
+
         if (this->config["generator"]["data"]["save"].as<bool>())
           this->SavePointCloud();
 
-        this->removeModelsByName(all_models_);
-        estado = 4;
-        break;
-
-      case 4:
-        if (this->CheckDeletedModels(all_models_))
-        {
-          this->env_count++;
-          estado = 1;
-        }
-        break;
-
-      case 5:
-        // this->env_count++;
-        // estado = 1;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        break;
-
-      default:
-        break;
+        first_run = false;
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(this->config["generator"]["iteration_delay"].as<int>()));
+      else {
+        this->console.info("GENERATING RANDOM ENVIROMENT..." + std::to_string(this->env_count));
+
+        if (env_change_iteration != 0){
+          if (env_change_counter == env_change_iteration) {
+            this->console.debug("Enviroment change iteration reached");
+            this->removeModelsByName(env_models);
+            env_models = this->SpawnRandomEnviroment();
+            this->moveDownTillCollisionWithGround(env_models);
+            env_change_counter = 0;
+            this->console.debug("New Enviroment spawned");
+          }
+        }
+
+        if (par_change_iteration != 0){
+          if (par_change_counter == par_change_iteration) {
+            this->console.debug("Paralellepipeds change iteration reached");
+            this->removeModelsByName(par_models);
+            par_models = this->SpawnRandomParalellepipeds();
+            par_change_counter = 0;
+            this->console.debug("New Paralellepipeds spawned");
+          }
+        }
+
+        this->rotateSensorModel();
+        this->console.debug("Sensor rotated");
+
+        if (this->config["generator"]["paused"].as<bool>()) {
+          this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
+          std::getchar();
+        }
+
+        if (this->config["generator"]["data"]["save"].as<bool>())
+          this->SavePointCloud();
+
+        env_change_counter++;
+        par_change_counter++;
+        this->env_count++;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(this->config["generator"]["iteration_delay"].as<int>()));
+      }
     }
     this->console.info("FINISHED GENERATING DATASET", GREEN);
   }
@@ -176,7 +181,23 @@ namespace gazebo
     std::mutex mtx;
     mtx.lock();
     this->world->InsertModelSDF(*sensor_sdf);
+        // Wait for the sensor to be ready
+    this->console.debug("Waiting for sensor model to be ready...");
+
+    this->sensor_model = this->world->ModelByName(sensor_name);
+    while (!this->sensor_model)
+    {
+      this->sensor_model = this->world->ModelByName(sensor_name);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
     mtx.unlock();
+
+    this->console.debug("Waitting for generated data ready");
+    while (this->cloud_L->empty())
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    this->console.debug("Sensor model and dataready", GREEN);
   }
 
   void DatasetGenerator::rotateSensorModel(){
@@ -188,13 +209,19 @@ namespace gazebo
     mtx.lock();
     im::Pose3d orig_pose = this->sensor_model->WorldPose();
     new_pose.Set(orig_pose.Pos(), rotation);
-    sensor_model->SetWorldPose(new_pose);
+    this->sensor_model->SetWorldPose(new_pose);
     mtx.unlock();
   }
 
   void DatasetGenerator::removeModelsByName(std::vector<std::string> models)
   {
     this->console.debug("DELETING MODELS...");
+
+    if (models.size() == 0)
+    {
+      this->console.debug("No models to delete");
+      return;
+    }
 
     std::mutex mtx;
 
@@ -204,6 +231,8 @@ namespace gazebo
       mtx.lock();
       this->console.debug("DELETING MODEL: " + model_name);
       this->world->RemoveModel(model_name);
+      while (this->world->ModelByName(model_name))
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
       mtx.unlock();
     }
     // this->world->SetPaused(false);
@@ -248,6 +277,8 @@ namespace gazebo
 
         mtx.lock();        
         this->world->InsertModelSDF(*temp_sdfFile);
+        while (!this->world->ModelByName(model_name))
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
         mtx.unlock();
 
         collision = this->checkCollisions(model_name, this->sensor_model->GetName());
@@ -290,47 +321,103 @@ namespace gazebo
     {
       fs::path orig_model_sdf = model_path / "model.sdf";
       fs::path temp_model_sdf = utils::copySDFfile(orig_model_sdf);
+      this->console.debug("Crea una copia del SDF: " + temp_model_sdf.string());
 
       sdf::SDFPtr temp_sdfFile = utils::getSDFfile(temp_model_sdf);
-      sdf::ElementPtr model_element = temp_sdfFile->Root()->GetElement("model");
       
-      std::string model_name = model_element->GetName() + "_" + std::to_string(i);
+      if (!temp_sdfFile)
+        this->console.debug("Error al cargar el SDF: " + temp_model_sdf.string());
+      else
+        this->console.debug("Obtiene un puntero al SDF: " + temp_sdfFile->Root()->GetName());
 
+      sdf::ElementPtr model_element = temp_sdfFile->Root()->GetElement("model");
+      this->console.debug("Obtiene un puntero al modelo: " + model_element->GetName());
+
+      std::string model_name = model_element->GetName() + "_" + std::to_string(i);
       utils::setModelName(model_element, model_name);
-      
+      this->console.debug("Setea el nombre del modelo: " + model_name);
+
       bool collision = true;
       std::mutex mtx;
       do
       {
-        im::Pose3d pose = utils::computeRandomPose(min_pos, max_pos);
+        im::Vector3d position = utils::computeRandomPosition(min_pos, max_pos);
+        this->console.debug("Genera una posicion aleatoria: ");
         im::Vector3d scale = utils::computeRandomScale(length, width, height);
+        this->console.debug("Genera una escala aleatoria: ");
 
-        utils::setModelPose(model_element, pose);
-        utils::setModelScale(model_element, scale);
+        utils::setModelPosition(model_element, position);
+        this->console.debug("Setea la pose del modelo: ");
+        utils::setMeshScale(model_element, scale);
+        this->console.debug("Setea la escala del modelo: ");
 
-        mtx.lock();        
+        mtx.lock();
+        this->console.debug("Bloquea el mutex: ");        
         this->world->InsertModelSDF(*temp_sdfFile);
+        // Wait for model to be inserted
+        while (!this->world->ModelByName(model_name))
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        this->console.debug("Inserta el modelo en el mundo: ");
         mtx.unlock();
+        this->console.debug("Desbloquea el mutex: ");
 
         collision = this->checkCollisions(model_name, this->sensor_model->GetName());
+        this->console.debug("Chequea colisiones PASSED: ");
 
         if (!collision)
           model_names.push_back(model_name);
         else
         {
           mtx.lock();
+          this->console.debug("Bloquea el mutex: ");
           this->world->RemoveModel(model_name);
+          while(this->world->ModelByName(model_name))
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          this->console.debug("Elimina el modelo: ");
           mtx.unlock();
-          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+          this->console.debug("Desbloquea el mutex: ");
         }
 
       } while (collision);
+
     }
     this->console.debug("PARALELLEPIPEDS SPAWNED CORRECTLY");
     return model_names;
   }
 
+  void DatasetGenerator::moveDownTillCollisionWithGround(std::vector<std::string> model_name)
+  {
+    this->console.debug("MOVING DOWN TILL COLLISION WITH GROUND...");
 
+    std::string ground_name = this->config["generator"]["ground_name"].as<std::string>();
+    for (const std::string &model_name : model_name) {
+
+ 
+      physics::ModelPtr model;
+      do {
+        model = this->world->ModelByName(model_name);
+      } while (!model);
+
+
+      model->PlaceOnEntity(ground_name);
+
+      // im::Pose3d pose = model->WorldPose();
+      // im::Vector3d position = pose.Pos();
+      // im::Vector3d new_position = position;
+
+      // while (true) {
+      //   new_position.Z() -= 0.05;
+      //   pose.Set(new_position, pose.Rot());
+      //   model->SetWorldPose(pose);
+      //   this->console.debug("Moving model down 5cm: " + model_name);
+
+      //   if (this->checkCollisions(model_name, this->config["generator"]["ground_name"].as<std::string>())) {
+      //     this->console.debug("Collision detected with ground: " + model_name, GREEN);
+      //     break;
+      //   }
+      // }
+    }
+  }
 
   //---- CHECK FUNCTIONS -----------------------------------------------------//
   void DatasetGenerator::CheckOutputDirs()
@@ -385,57 +472,33 @@ namespace gazebo
     }
   }
 
-  bool DatasetGenerator::CheckSpawnedModels(std::vector<std::string> model_names)
-  {
-    this->console.debug("Checking if all models were spawned correctly");
-    int spawned_models = 0;
-    std::mutex mtx;
-    for (auto model_name : model_names)
-    {
-      mtx.lock();
-      if (!this->world->ModelByName(model_name)) 
-      {
-        mtx.unlock();
-        this->console.debug("Not found all models, trying in next step");
-        return false;
-      }
-      mtx.unlock();
-    }
-    this->console.debug("All models were spawned correctly", GREEN);
-    return true;
-  }
-
-  bool DatasetGenerator::CheckDeletedModels(std::vector<std::string> model_names)
-  {
-    this->console.debug("Checking if all models were deleted correctly");
-
-    std::mutex mtx;
-
-    for (auto model_name : model_names)
-    {
-      mtx.lock();
-      if (this->world->ModelByName(model_name))
-      {
-        mtx.unlock();
-        this->console.debug("Not all models were deleted, trying in next step");
-        return false;
-      }
-      mtx.unlock();
-    }
-    this->console.debug("All models were deleted correctly", GREEN);
-    return true;
-  }
-
   bool DatasetGenerator::checkCollisions(std::string model_name_1, std::string model_name_2)
   {
+    this->console.debug("Checking collisions between: " + model_name_1 + " and " + model_name_2);
     std::mutex mtx;
+
     mtx.lock();
+    this->console.debug("Locking mutex");
+
     physics::ModelPtr model_a = this->world->ModelByName(model_name_1);
+    if (!model_a)
+      this->console.debug("Can not get model: " + model_name_1);
+    else
+      this->console.debug("Got model by name: " + model_name_1);
+    
     physics::ModelPtr model_b = this->world->ModelByName(model_name_2);
+    if (!model_b)
+      this->console.debug("Can not get model: " + model_name_2);
+    else
+      this->console.debug("Got model by name: " + model_name_2);
+
     mtx.unlock();
+    this->console.debug("Unlocking mutex");
 
     im::AxisAlignedBox model_a_bbx = model_a->CollisionBoundingBox();
+    this->console.debug("Getting model a bounding box");
     im::AxisAlignedBox model_b_bbx = model_b->CollisionBoundingBox();
+    this->console.debug("Getting model b bounding box");
 
     return model_a_bbx.Intersects(model_b_bbx);
   }
@@ -443,26 +506,18 @@ namespace gazebo
 
 
   //---- POINTCLOUD -----------------------------------------------------//
-  void DatasetGenerator::SavePointCloud()
-  {
+  void DatasetGenerator::SavePointCloud() {
     this->console.debug("SAVING POINTCLOUD...");
+
     pcl::PCDWriter writer;
     std::stringstream ss;
     ss.str("");
     ss << this->pcd_dir.string() << "/" << std::setfill('0') << std::setw(5) << this->env_count << ".pcd";
 
-    pcl::copyPointCloud(*this->cloud_I, *this->cloud_L);
-
-
-    for (size_t i = 0; i < this->cloud_I->points.size(); i++)
-    {
-      this->cloud_L->points[i].label = this->cloud_I->points[i].intensity; 
-    }
-    
+    this->console.info("Saving point cloud in: " + ss.str(), GREEN);
 
     if (!this->cloud_L->empty())
     {
-
       if (this->cloud_L->points.size() != this->cloud_L->width)
       {
         int cloud_size = this->cloud_L->points.size();
@@ -470,6 +525,10 @@ namespace gazebo
         this->cloud_L->height = 1;
       }
       writer.write<PointL>(ss.str(), *this->cloud_L, this->config["generator"]["data"]["binary"].as<bool>());
+    }
+    else
+    {
+      this->console.info("Cloud is empty", RED);
     }
   }
 
@@ -486,11 +545,12 @@ namespace gazebo
     }
 
     this->ros_node = new ros::NodeHandle("arvc_gazebo_ros_dataset_generator");
+    std::string topic_name = this->config["sensor"]["topic"].as<std::string>();
 
+    this->console.debug("Subscribing to topic: " + topic_name);
     ros::SubscribeOptions ros_so =
         ros::SubscribeOptions::create<sensor_msgs::PointCloud2>(
-            this->config["sensor"]["topic"].as<std::string>(), 1,
-            boost::bind(&DatasetGenerator::PointCloudCallback, this, _1),
+            topic_name, 1, boost::bind(&DatasetGenerator::PointCloudCallback, this, _1),
             ros::VoidPtr(), &this->ros_cbqueue);
 
     this->ros_sub = this->ros_node->subscribe(ros_so);
@@ -514,39 +574,12 @@ namespace gazebo
     PointCloudI::Ptr temp_cloud(new PointCloudI);
     pcl::fromPCLPointCloud2(pcl_pc2, *this->cloud_I);
 
-    // *pcl_cloud = *temp_cloud;
+    pcl::copyPointCloud(*this->cloud_I, *this->cloud_L);
+
+    for (size_t i = 0; i < this->cloud_I->points.size(); i++)
+      this->cloud_L->points[i].label = this->cloud_I->points[i].intensity; 
+
   }
 
 
 }
-
-/* namespace YAML
-{
-  template<>
-  struct convert<im::Vector3d>
-  {
-    static Node encode(const im::Vector3d& v3d)
-    {
-      Node node;
-      node.push_back(v3d.X());
-      node.push_back(v3d.Y());
-      node.push_back(v3d.Z());
-      return node;
-    }
-
-    static bool decode(const Node& node, im::Vector3d& v3d)
-    {
-      if(!node.IsSequence() || node.size() != 3) {
-        return false;
-      }
-
-      double x = node[0].as<double>();
-      double y = node[1].as<double>();
-      double z = node[2].as<double>();
-
-      v3d.Set(x, y, z);
-
-      return true;
-    }
-  };
-} */

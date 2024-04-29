@@ -91,12 +91,12 @@ target_link_libraries(arvc_gazebo_ros_dataset_generator ${catkin_LIBRARIES} ${GA
 # add_library(arvc_gazebo_ros_tf_publisher src/arvc_gazebo_ros_tf_publisher.cpp)
 # target_link_libraries( arvc_gazebo_ros_tf_publisher ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} Qt5::Core Qt5::Widgets Qt5::PrintSupport) 
 
-add_library(arvc_gazebo_ros_model_move_v2 src/arvc_gazebo_ros_model_move_v2.cpp)
-target_link_libraries(arvc_gazebo_ros_model_move_v2 ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES} ) 
+# add_library(arvc_gazebo_ros_model_move_v2 src/arvc_gazebo_ros_model_move_v2.cpp)
+# target_link_libraries(arvc_gazebo_ros_model_move_v2 ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES} ) 
 
 # add_library(model_collision_detector src/arvc_gazebo_model_collision_detector.cpp)
 # target_link_libraries(model_collision_detector ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES})
 
 
-add_executable(main src/main.cpp)
-target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES}) 
+# add_executable(main src/main.cpp)
+# target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES}) 
