@@ -1,8 +1,13 @@
+#pragma once
+
+#include <thread>
 #include <functional>
-// #include <gazebo/gazebo.hh>
+
+#include <gazebo/gazebo.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/common.hh>
 #include <ignition/math/Vector3.hh>
+#include <sdf/sdf.hh>
 
 #include <ros/ros.h>
 #include <ros/advertise_options.h>
@@ -13,36 +18,48 @@
 
 #include <geometry_msgs/TransformStamped.h>
 
+#include "console_utils.hpp"
+
 
 namespace gazebo
 {
   class PubWorldTF : public ModelPlugin
   {
 
+    public: 
     /// \brief Constructor
-    public: PubWorldTF();
+    PubWorldTF();
 
     /// \brief Destructor
-    public: ~PubWorldTF();
+    ~PubWorldTF();
 
+
+    private:
+    
     /// \brief Load the plugin
-    public: void Load(physics::ModelPtr _parent, sdf::ElementPtr /*_sdf*/);
+    void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
     
     /// \brief Update world Connection
-    public: void OnUpdate();
+    void getConfig(sdf::ElementPtr _sdf);
     
     /// \brief Publish tf between model and gazebo world frame
-    private: void PubThread();
+    void PubThread();
+
+    void setupROS();
       
 
     // Pointer to the model
-    private:  physics::ModelPtr model;
-              ignition::math::Pose3d world_pose;
-              std::unique_ptr<ros::NodeHandle> _nh;
-              ros::Publisher pub_;
-              boost::shared_ptr<tf2_ros::TransformBroadcaster> _tf_broadcaster;
-              tf::Transform tf;
-              event::ConnectionPtr updateConnection;
-              std::string frameName;
+    physics::ModelPtr model;
+    std::string frameName;
+    int hz;
+
+    std::thread pub_thread;
+
+    ros::NodeHandle *ros_node;
+    tf2_ros::TransformBroadcaster tf_broadcaster;
+
+    ignition::math::Pose3d world_pose;
+
+    utils::Console console;
   };
 }

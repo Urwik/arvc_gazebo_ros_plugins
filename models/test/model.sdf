@@ -1,5 +1,5 @@
 <sdf version='1.7'>
-  <model name='TEST_MODEL'>
+  <model name='test'>
     <static>1</static>
     <self_collide>0</self_collide>
     <enable_wind>0</enable_wind>
@@ -103,6 +103,6 @@
         </surface>
       </collision>
     </link>
-    <plugin name="tf_publisher" filename="libarvc_gazebo_ros_tf_publisher.so"/>
+    <plugin name="tf_publisher" filename="libarvc_gazebo_ros_world_tf.so"/>
   </model>
 </sdf>

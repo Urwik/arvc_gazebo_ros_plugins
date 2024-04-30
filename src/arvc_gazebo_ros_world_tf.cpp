@@ -1,6 +1,5 @@
 
-#include <arvc_gazebo_ros_plugins/arvc_gazebo_ros_world_tf.h>
-
+#include "arvc_gazebo_ros_plugins/arvc_gazebo_ros_world_tf.hpp"
 
 namespace gazebo
 {
@@ -10,62 +9,76 @@ namespace gazebo
 
   ////////////////////////////////////////////////////////////////////////////////
   // Constructor
-  PubWorldTF::PubWorldTF()
-  {
-    this->_nh.reset(new ros::NodeHandle("gazebo_client"));
-    this->_tf_broadcaster.reset(new tf2_ros::TransformBroadcaster());
+  PubWorldTF::PubWorldTF() {
   }
 
 
   ////////////////////////////////////////////////////////////////////////////////
   // Destructor
-  PubWorldTF::~PubWorldTF()
-  {
+  PubWorldTF::~PubWorldTF() {
   }
 
 
   //////////////////////////////////////////////////////////////////////////////
-  void PubWorldTF::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
+  void PubWorldTF::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   {
-    this->model = _parent;
+    this->model = _model;
 
-    // Parse args from SDF
+    this->getConfig(_sdf);
+
+    this->setupROS();
+
+    this->pub_thread = std::thread(std::bind(&PubWorldTF::PubThread, this));
+
+    this->console.info("----- TF PLUGIN LOADED CORRECTLY -----");
+  }
+
+  void PubWorldTF::getConfig(sdf::ElementPtr _sdf) {    // Parse args from SDF
+    this->console.debug("Loading debug flag");
+    
+    if (_sdf)
+      this->console.info("SDF Pointer correct loaded", GREEN);
+    else
+      this->console.info("SDF Pointer incorrect loaded", RED);
+
+    if (_sdf->HasElement("debug"))
+      this->console.enable = _sdf->GetElement("debug")->Get<bool>();
+    else
+      this->console.enable = true;
+
+    this->console.debug("\tDebug flag loaded: " + std::to_string(this->console.enable));
+    
+    this->console.debug("Loading target frame");
+    
     if (_sdf->HasElement("target_frame"))
       this->frameName = _sdf->GetElement("target_frame")->Get<std::string>();
     else
       this->frameName = "base_link";
-
-    this->updateConnection = event::Events::ConnectWorldUpdateBegin(
-        std::bind(&PubWorldTF::OnUpdate, this));
-
-    if (!ros::isInitialized()) {
-      ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
-        << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
-      return;
-    }
     
-    boost::thread ros_pub_thread(boost::bind(&PubWorldTF::PubThread, this));
-
-    ROS_INFO("----- TF PLUGIN LOADED CORRECTLY -----");
-    ROS_INFO("----- %s --> gz_world -----", this->frameName.c_str());
-  }
+    this->console.debug("\tTarget frame loaded: " + this->frameName);
 
 
-  //////////////////////////////////////////////////////////////////////////////
-  void PubWorldTF::OnUpdate()
-  {
+    this->console.debug("Loading hz");
+    
+    if (_sdf->HasElement("hz"))
+      this->hz = _sdf->GetElement("hz")->Get<int>();
+    else
+      this->hz = 100;
+    
+    this->console.debug("\tHz loaded: " + std::to_string(this->hz));
   }
 
 
   //////////////////////////////////////////////////////////////////////////////
   void PubWorldTF::PubThread(){
 
+    while (!this->model) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
     int seq = 0;
     while(true)
     {
-      tf::Vector3 pose;
-      tf::Quaternion quat;
-
       geometry_msgs::TransformStamped transform;
 
       transform.header.frame_id = "gz_world";
@@ -74,26 +87,36 @@ namespace gazebo
 
       transform.child_frame_id = this->frameName;
 
-      transform.transform.translation.x = this->model->WorldPose().Pos().X();
-      transform.transform.translation.y = this->model->WorldPose().Pos().Y();
-      transform.transform.translation.z = this->model->WorldPose().Pos().Z();
+      this->world_pose = this->model->WorldPose();
 
-      transform.transform.rotation.w = this->model->WorldPose().Rot().W();
-      transform.transform.rotation.x = this->model->WorldPose().Rot().X();
-      transform.transform.rotation.y = this->model->WorldPose().Rot().Y();
-      transform.transform.rotation.z = this->model->WorldPose().Rot().Z();      
+      transform.transform.translation.x = this->world_pose.Pos().X();
+      transform.transform.translation.y = this->world_pose.Pos().Y();
+      transform.transform.translation.z = this->world_pose.Pos().Z();
 
-      this->_tf_broadcaster->sendTransform(transform);
-      seq++;
+      transform.transform.rotation.w = this->world_pose.Rot().W();
+      transform.transform.rotation.x = this->world_pose.Rot().X();
+      transform.transform.rotation.y = this->world_pose.Rot().Y();
+      transform.transform.rotation.z = this->world_pose.Rot().Z();      
 
+      this->tf_broadcaster.sendTransform(transform);
       ros::spinOnce();
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000/this->hz));
 
-
-      geometry_msgs::TransformPtr transform_msg(new geometry_msgs::Transform());
-      tf::Transform::
-
+      seq++;
     }
+  }
+
+  void PubWorldTF::setupROS()
+  {
+    // Make sure the ROS node for Gazebo has already been initialized
+    if (!ros::isInitialized())
+    {
+      ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
+                       << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
+      return;
+    }
+
+    this->ros_node = new ros::NodeHandle(this->frameName + "_gz_world_tf");
   }
 
 }
