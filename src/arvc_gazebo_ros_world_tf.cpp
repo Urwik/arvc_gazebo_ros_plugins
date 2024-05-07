@@ -26,7 +26,7 @@ namespace gazebo
 
     this->getConfig(_sdf);
 
-    this->setupROS();
+    // this->setupROS();
 
     this->pub_thread = std::thread(std::bind(&PubWorldTF::PubThread, this));
 
@@ -34,43 +34,53 @@ namespace gazebo
   }
 
   void PubWorldTF::getConfig(sdf::ElementPtr _sdf) {    // Parse args from SDF
-    this->console.debug("Loading debug flag");
     
     if (_sdf)
       this->console.info("SDF Pointer correct loaded", GREEN);
     else
       this->console.info("SDF Pointer incorrect loaded", RED);
 
+    this->console.info(" --- Getting parameters from SDF -------------");
+
+
     if (_sdf->HasElement("debug"))
+    {
       this->console.enable = _sdf->GetElement("debug")->Get<bool>();
-    else
+      this->console.info("\tGetting debug flag from SDF: " + std::to_string(this->console.enable), RESET);
+    }
+    else {
+      this->console.info("Debug flag not found in SDF, using default value: true", ORANGE);
       this->console.enable = true;
+    }
 
-    this->console.debug("\tDebug flag loaded: " + std::to_string(this->console.enable));
     
-    this->console.debug("Loading target frame");
     
-    if (_sdf->HasElement("target_frame"))
+    if (_sdf->HasElement("target_frame")){
       this->frameName = _sdf->GetElement("target_frame")->Get<std::string>();
+      this->console.info("\tTarget frame loaded: " + this->frameName, RESET);
+    }
     else
+    {
+      this->console.info("Target frame not found in SDF, using default value: base_link", ORANGE);
       this->frameName = "base_link";
-    
-    this->console.debug("\tTarget frame loaded: " + this->frameName);
-
-
-    this->console.debug("Loading hz");
+    }
     
     if (_sdf->HasElement("hz"))
+    {
       this->hz = _sdf->GetElement("hz")->Get<int>();
-    else
+      this->console.info("\tHz loaded: " + std::to_string(this->hz), RESET);
+    }
+    else {
+      this->console.info("Hz not found in SDF, using default value: 100", ORANGE);
       this->hz = 100;
-    
-    this->console.debug("\tHz loaded: " + std::to_string(this->hz));
+    }
   }
 
 
   //////////////////////////////////////////////////////////////////////////////
   void PubWorldTF::PubThread(){
+
+    std::mutex mtx;
 
     while (!this->model) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -87,7 +97,10 @@ namespace gazebo
 
       transform.child_frame_id = this->frameName;
 
+      mtx.lock();
       this->world_pose = this->model->WorldPose();
+      mtx.unlock();
+      this->console.debug("Got world pose", GREEN);
 
       transform.transform.translation.x = this->world_pose.Pos().X();
       transform.transform.translation.y = this->world_pose.Pos().Y();
@@ -99,7 +112,7 @@ namespace gazebo
       transform.transform.rotation.z = this->world_pose.Rot().Z();      
 
       this->tf_broadcaster.sendTransform(transform);
-      ros::spinOnce();
+      // ros::spinOnce();
       std::this_thread::sleep_for(std::chrono::milliseconds(1000/this->hz));
 
       seq++;

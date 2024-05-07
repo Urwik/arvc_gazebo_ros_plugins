@@ -49,7 +49,7 @@ namespace gazebo
   {
     std::mutex mtx;
 
-    this->world->Reset();
+    // this->world->Reset();
     this->world->SetPhysicsEnabled(this->config["physics"].as<bool>());
 
     // this->insertSensorModel();
@@ -181,21 +181,26 @@ namespace gazebo
     std::mutex mtx;
     mtx.lock();
     this->world->InsertModelSDF(*sensor_sdf);
+    mtx.unlock();
+
         // Wait for the sensor to be ready
     this->console.debug("Waiting for sensor model to be ready...");
 
+    mtx.lock();
     this->sensor_model = this->world->ModelByName(sensor_name);
+    mtx.unlock();
     while (!this->sensor_model)
     {
+      mtx.lock();
       this->sensor_model = this->world->ModelByName(sensor_name);
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      mtx.unlock();
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    mtx.unlock();
 
     this->console.debug("Waitting for generated data ready");
     while (this->cloud_L->empty())
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     this->console.debug("Sensor model and dataready", GREEN);
   }
@@ -495,10 +500,14 @@ namespace gazebo
     mtx.unlock();
     this->console.debug("Unlocking mutex");
 
+    mtx.lock();
+    this->console.debug("Mutex locked");
     im::AxisAlignedBox model_a_bbx = model_a->CollisionBoundingBox();
     this->console.debug("Getting model a bounding box");
     im::AxisAlignedBox model_b_bbx = model_b->CollisionBoundingBox();
     this->console.debug("Getting model b bounding box");
+    mtx.unlock();
+    this->console.debug("Mutex unlocked");
 
     return model_a_bbx.Intersects(model_b_bbx);
   }
