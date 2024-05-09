@@ -23,8 +23,10 @@ namespace gazebo
   }
 
   /////////////////////////////////
-  DatasetGenerator::~DatasetGenerator()
-  {
+  DatasetGenerator::~DatasetGenerator()  {
+    if (generator_thread.joinable()) {
+    generator_thread.join();
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -38,7 +40,7 @@ namespace gazebo
 
     this->CheckOutputDirs();
 
-    this->generator_thread = std::thread(std::bind(&DatasetGenerator::GenerateDataset, this));
+    this->generator_thread = boost::thread(boost::bind(&DatasetGenerator::GenerateDataset, this));
 
     this->console.info("ARVC GAZEBO SPAWNMODEL PLUGIN LOADED", GREEN);
   }
@@ -47,9 +49,10 @@ namespace gazebo
   // MAIN FUNCTION
   void DatasetGenerator::GenerateDataset()
   {
-    std::mutex mtx;
+    boost::mutex mtx;
 
     // this->world->Reset();
+
     this->world->SetPhysicsEnabled(this->config["physics"].as<bool>());
 
     // this->insertSensorModel();
@@ -178,17 +181,14 @@ namespace gazebo
     cylinder_elem->GetElement("radius")->Set(new_radius);
     cylinder_elem->GetElement("length")->Set(new_length);
 
-    std::mutex mtx;
+    boost::mutex mtx;
     mtx.lock();
     this->world->InsertModelSDF(*sensor_sdf);
-    mtx.unlock();
-
-        // Wait for the sensor to be ready
+    // Wait for the sensor to be ready
     this->console.debug("Waiting for sensor model to be ready...");
-
-    mtx.lock();
     this->sensor_model = this->world->ModelByName(sensor_name);
     mtx.unlock();
+
     while (!this->sensor_model)
     {
       mtx.lock();
@@ -196,17 +196,19 @@ namespace gazebo
       mtx.unlock();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    this->console.debug("Sensor MODEL ready", GREEN);
+
 
     this->console.debug("Waitting for generated data ready");
     while (this->cloud_L->empty())
     {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    this->console.debug("Sensor model and dataready", GREEN);
+    this->console.debug("Sensor DATA ready", GREEN);
   }
 
   void DatasetGenerator::rotateSensorModel(){
-    std::mutex mtx;
+    boost::mutex mtx;
 
     im::Pose3d new_pose;
     im::Vector3d rotation = utils::computeRandomRotation();
@@ -228,7 +230,7 @@ namespace gazebo
       return;
     }
 
-    std::mutex mtx;
+    boost::mutex mtx;
 
     // this->world->SetPaused(true);
     for (const std::string &model_name : models)
@@ -271,7 +273,7 @@ namespace gazebo
       utils::setLaserRetroForVisualElement(model_element, laser_retro_count);
       
       bool collision = true;
-      std::mutex mtx;
+      boost::mutex mtx;
       do
       {
         im::Pose3d pose = utils::computeRandomPose(min_pos, max_pos);
@@ -343,7 +345,7 @@ namespace gazebo
       this->console.debug("Setea el nombre del modelo: " + model_name);
 
       bool collision = true;
-      std::mutex mtx;
+      boost::mutex mtx;
       do
       {
         im::Vector3d position = utils::computeRandomPosition(min_pos, max_pos);
@@ -480,7 +482,7 @@ namespace gazebo
   bool DatasetGenerator::checkCollisions(std::string model_name_1, std::string model_name_2)
   {
     this->console.debug("Checking collisions between: " + model_name_1 + " and " + model_name_2);
-    std::mutex mtx;
+    boost::mutex mtx;
 
     mtx.lock();
     this->console.debug("Locking mutex");
@@ -497,15 +499,11 @@ namespace gazebo
     else
       this->console.debug("Got model by name: " + model_name_2);
 
-    mtx.unlock();
-    this->console.debug("Unlocking mutex");
-
-    mtx.lock();
-    this->console.debug("Mutex locked");
     im::AxisAlignedBox model_a_bbx = model_a->CollisionBoundingBox();
     this->console.debug("Getting model a bounding box");
     im::AxisAlignedBox model_b_bbx = model_b->CollisionBoundingBox();
     this->console.debug("Getting model b bounding box");
+
     mtx.unlock();
     this->console.debug("Mutex unlocked");
 

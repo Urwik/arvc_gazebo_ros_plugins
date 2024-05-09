@@ -1,11 +1,11 @@
 #pragma once
 // C++
 #include <filesystem>
-#include <thread>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <math.h>
+// #include <thread>
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
@@ -168,7 +168,7 @@ namespace gazebo
 
     int env_count;
     int laser_retro;
-    std::thread generator_thread;
+    boost::thread generator_thread;
 
     // UTILS
     utils::Console console;
