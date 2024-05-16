@@ -4,6 +4,16 @@ project(arvc_gazebo_ros_plugins)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+# Setting compile flags based on build type
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")  # Debug information, no optimization
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")  # Optimized code for Release mode
+
+# Apply the flags depending on build type
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
