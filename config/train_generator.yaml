@@ -1,5 +1,5 @@
 physics: false
-debug: false
+debug: true
 
 generator:
   paused: false
@@ -7,7 +7,7 @@ generator:
   items_to_generate: 10000
   data:
     save: true
-    out_dir: ""
+    out_dir: "/home/arvc/datasets/test"
     binary: true
 
 sensor:
@@ -28,7 +28,7 @@ paralellepipeds:
 
 environment:
   item_count: 50
-  model_path: ""
+  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/pine_1"
   change_each_iteration: false
   lenght: [0.1, 0.5]
   width: [0.05, 0.3]

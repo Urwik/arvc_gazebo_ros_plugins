@@ -13,6 +13,16 @@ namespace gazebo
 
   DatasetGenerator::DatasetGenerator()
   {
+
+    int i = 60;
+    std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
+    while (i>0) {
+      sleep(1);
+      std::cout << i << std::endl;
+      i--;
+    }
+
+
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->cloud_I.reset(new PointCloudI);
     this->cloud_L.reset(new PointCloudL);
@@ -48,6 +58,8 @@ namespace gazebo
   {
     std::mutex mtx;
 
+    this->console.debug("Inserting sensor model");
+    int asdf = 12;
     this->insertSensorModel();
 
     // Wait for the sensor to be ready
@@ -146,7 +158,7 @@ namespace gazebo
     this->config = YAML::LoadFile(yaml_config);
     }
     else {
-      std::cout << RED << "Param yaml_config inside plugin declaration" << RESET << std::endl;
+      std::cout << RED << "NO FOUND param yaml_config inside sdf model plugin declaration" << RESET << std::endl;
     } 
   }
 
@@ -163,7 +175,7 @@ namespace gazebo
     float current_length = cylinder_elem->GetElement("length")->Get<float>();
 
     float new_radius = this->config["sensor"]["collision_offset"].as<float>() + current_radius;
-    float new_length = this->config["sensor"]["collision_length"].as<float>() + current_length;
+    float new_length = this->config["sensor"]["collision_offset"].as<float>() + current_length;
 
     cylinder_elem->GetElement("radius")->Set(new_radius);
     cylinder_elem->GetElement("length")->Set(new_length);
