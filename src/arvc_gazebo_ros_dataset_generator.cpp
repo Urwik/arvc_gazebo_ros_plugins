@@ -14,7 +14,7 @@ namespace gazebo
   DatasetGenerator::DatasetGenerator()
   {
 
-    int i = 60;
+    int i = 30;
     std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
     while (i>0) {
       sleep(1);
@@ -59,7 +59,6 @@ namespace gazebo
     std::mutex mtx;
 
     this->console.debug("Inserting sensor model");
-    int asdf = 12;
     this->insertSensorModel();
 
     // Wait for the sensor to be ready
@@ -317,6 +316,9 @@ namespace gazebo
 
         mtx.lock();        
         this->world->InsertModelSDF(*temp_sdfFile);
+        while (!this->world->ModelByName(model_name))
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
         mtx.unlock();
 
         collision = this->checkCollisions(model_name, this->sensor_model->GetName());
@@ -435,16 +437,34 @@ namespace gazebo
 
   bool DatasetGenerator::checkCollisions(std::string model_name_1, std::string model_name_2)
   {
+    physics::ModelPtr model_a;
+    physics::ModelPtr model_b;
+
     std::mutex mtx;
     mtx.lock();
-    physics::ModelPtr model_a = this->world->ModelByName(model_name_1);
-    physics::ModelPtr model_b = this->world->ModelByName(model_name_2);
-    mtx.unlock();
+
+    do 
+    {
+      model_a = this->world->ModelByName(model_name_1);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    while (!model_a);
+
+    do 
+    {
+      model_b = this->world->ModelByName(model_name_2);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    while (!model_b);
 
     im::AxisAlignedBox model_a_bbx = model_a->CollisionBoundingBox();
     im::AxisAlignedBox model_b_bbx = model_b->CollisionBoundingBox();
 
-    return model_a_bbx.Intersects(model_b_bbx);
+    bool intersection = model_a_bbx.Intersects(model_b_bbx);
+    mtx.unlock();
+
+    return intersection;
+
   }
 
 

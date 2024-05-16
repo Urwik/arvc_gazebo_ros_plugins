@@ -19,7 +19,7 @@ sensor:
 paralellepipeds:
   item_count: 50
   model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/BASE_MODELS/simple_block_v2"
-  lenght: [0.1, 0.5]
+  length: [0.1, 0.5]
   width: [0.05, 0.3]
   height: [0.05, 0.3]
   position:
@@ -30,7 +30,7 @@ environment:
   item_count: 50
   model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/pine_1"
   change_each_iteration: false
-  lenght: [0.1, 0.5]
+  length: [0.1, 0.5]
   width: [0.05, 0.3]
   height: [0.05, 0.3]
   position:

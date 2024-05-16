@@ -54,7 +54,7 @@ namespace YAML
     }
   };
 
-    template<>
+  template<>
   struct convert<im::Vector2d>
   {
     static Node encode(const im::Vector2d& v2d)
