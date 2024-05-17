@@ -14,19 +14,13 @@ namespace gazebo
 
   DatasetGenerator::DatasetGenerator()
   {
-    cout << RED << "Running delay to attach gdb and debug the Plugin" << RESET << endl;
-    int i = 60;
-
-    std::cout << std::endl;
-    while (i > 0)
-    {
-      std::cout << "\033[2K";
-      std::cout << "\033[G";
-      std::cout << i;
-      std::cout.flush();
-      i--;
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
+    bool gdb_attached = false;
+    while (!gdb_attached) {
+      sleep(1);
     }
+
+
 
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->cloud_I.reset(new PointCloudI);
@@ -495,33 +489,41 @@ namespace gazebo
 
   bool DatasetGenerator::checkCollisions(std::string model_name_1, std::string model_name_2)
   {
-    this->console.debug("Checking collisions between: " + model_name_1 + " and " + model_name_2);
+    this->console.debug("-- CHECKING COLLISIONS", YELLOW);
+    this->console.debug("model_a: " + model_name_1, RESET);
+    this->console.debug("model_b: " + model_name_2, RESET);
+
     boost::mutex mtx;
 
+    physics::ModelPtr model_a;
+    physics::ModelPtr model_b;
+    im::AxisAlignedBox model_a_bbx;
+    im::AxisAlignedBox model_b_bbx;
+
+
     mtx.lock();
-    this->console.debug("Locking mutex");
 
-    physics::ModelPtr model_a = this->world->ModelByName(model_name_1);
-
-    while (!model_a)
+    do
     {
       model_a = this->world->ModelByName(model_name_1);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    this->console.debug("Got model by name: " + model_name_1);
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+    } while (!model_a);
+    this->console.debug("\tGot model a");
     
-    physics::ModelPtr model_b = this->world->ModelByName(model_name_2);
-    while (!model_b)
+    do
     {
       model_b = this->world->ModelByName(model_name_2);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    this->console.debug("Got model by name: " + model_name_2);
-    
-    im::AxisAlignedBox model_a_bbx = model_a->CollisionBoundingBox();
-    this->console.debug("Getting model a bounding box");
-    im::AxisAlignedBox model_b_bbx = model_b->CollisionBoundingBox();
-    this->console.debug("Getting model b bounding box");
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+    } while (!model_b);
+    this->console.debug("\tGot model b");
+
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
+
+    this->console.debug("Getting models bounding boxes:");
+    model_a_bbx = model_a->CollisionBoundingBox();
+    this->console.debug("\tGot model a bounding box", RESET);
+    model_b_bbx = model_b->CollisionBoundingBox();
+    this->console.debug("\tGot model b bounding box", RESET);
 
     mtx.unlock();
     this->console.debug("Mutex unlocked");
