@@ -113,20 +113,6 @@ namespace gazebo
     /// to continue from that number
     void ResumeEnvCount();
 
-    /**
-     * @brief Check if models are correctly spawned in the world
-     * @param model_names Vector of strings with model names
-     * @return true if all models are spawned correctly
-     */
-    bool CheckSpawnedModels(std::vector<std::string> model_names);
-
-    /**
-     * @brief Check if models are correctly removed from the world
-     * @param model_names Vector of strings with model names
-     * @return true if all models are removed correctly
-     */
-    bool CheckDeletedModels(std::vector<std::string> model_names);
-
 
     bool checkCollisions(std::string model_name_1, std::string model_name_2);
 

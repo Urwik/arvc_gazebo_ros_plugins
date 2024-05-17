@@ -4,6 +4,16 @@ project(arvc_gazebo_ros_plugins)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+# Setting compile flags based on build type
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")  # Debug information, no optimization
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")  # Optimized code for Release mode
+
+# Apply the flags depending on build type
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -16,6 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
 )
 
+find_package(Boost REQUIRED)
 find_package(gazebo REQUIRED)
 find_package(PCL 1.10 REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -30,6 +41,7 @@ link_directories(${GAZEBO_LIBRARY_DIRS})
 link_directories(${YAML_CPP_INCLUDE_DIRS})
 link_directories(${Eigen_INCLUDE_DIRS})
 link_directories(${SDFormat_LIBRARY_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
 
 add_definitions(${PCL_DEFINITIONS})
 add_definitions(${catkin_DEFINITIONS})
@@ -37,6 +49,7 @@ add_definitions(${GAZEBO_DEFINITIONS})
 add_definitions(${SDFormat_DEFINITIONS})
 add_definitions(${PCL_DEFINITIONS})
 add_definitions(${YAML_CPP_DEFINITIONS})
+add_definitions(${Boost_DEFINITIONS})
 
 
 
@@ -74,10 +87,10 @@ include_directories(
 
 ## Declare a C++ library
 add_library(arvc_gazebo_ros_dataset_generator src/arvc_gazebo_ros_dataset_generator.cpp)
-target_link_libraries(arvc_gazebo_ros_dataset_generator ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Eigen_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} ${Threads_LIBRARIES} ) 
+target_link_libraries(arvc_gazebo_ros_dataset_generator ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Eigen_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} ${Boost_LIBRARIES} ) 
 
 add_library(arvc_gazebo_ros_world_tf src/arvc_gazebo_ros_world_tf.cpp)
-target_link_libraries(arvc_gazebo_ros_world_tf ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES} ${SDFormat_LIBRARIES})  
+target_link_libraries(arvc_gazebo_ros_world_tf ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES} ${SDFormat_LIBRARIES} )  
 
 # add_library(arvc_gazebo_ros_model_move src/arvc_gazebo_ros_model_move.cpp)
 # target_link_libraries(arvc_gazebo_ros_model_move ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES} ) 

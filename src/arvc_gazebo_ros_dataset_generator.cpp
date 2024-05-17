@@ -14,6 +14,20 @@ namespace gazebo
 
   DatasetGenerator::DatasetGenerator()
   {
+    cout << RED << "Running delay to attach gdb and debug the Plugin" << RESET << endl;
+    int i = 60;
+
+    std::cout << std::endl;
+    while (i > 0)
+    {
+      std::cout << "\033[2K";
+      std::cout << "\033[G";
+      std::cout << i;
+      std::cout.flush();
+      i--;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->cloud_I.reset(new PointCloudI);
     this->cloud_L.reset(new PointCloudL);
@@ -42,7 +56,7 @@ namespace gazebo
 
     this->generator_thread = boost::thread(boost::bind(&DatasetGenerator::GenerateDataset, this));
 
-    this->console.info("ARVC GAZEBO SPAWNMODEL PLUGIN LOADED", GREEN);
+    this->console.info("ARVC GAZEBO DATASET GENERATOR PLUGIN LOADED", GREEN);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -259,7 +273,7 @@ namespace gazebo
 
     std::vector<std::string> model_names;
     int laser_retro_count = 1;
-    for (int i = 0; i < this->config["paralellepipeds"]["item_count"].as<int>(); i++)
+    for (int i = 0; i < item_count; i++)
     {
       fs::path orig_model_sdf = model_path / "model.sdf";
       fs::path temp_model_sdf = utils::copySDFfile(orig_model_sdf);
@@ -365,10 +379,11 @@ namespace gazebo
         while (!this->world->ModelByName(model_name))
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
         this->console.debug("Inserta el modelo en el mundo: ");
+
+        std::string sensor_name = this->sensor_model->GetName();
         mtx.unlock();
         this->console.debug("Desbloquea el mutex: ");
-
-        collision = this->checkCollisions(model_name, this->sensor_model->GetName());
+        collision = this->checkCollisions(model_name, sensor_name);
         this->console.debug("Chequea colisiones PASSED: ");
 
         if (!collision)
@@ -444,7 +459,6 @@ namespace gazebo
   {
     this->console.debug("RESUMING ENVIRONMENT COUNT...");
     fs::directory_entry last_entry;
-    bool first_entry = true;
     int last_num = 0;
 
     if (!fs::is_empty(this->pcd_dir))
@@ -488,17 +502,22 @@ namespace gazebo
     this->console.debug("Locking mutex");
 
     physics::ModelPtr model_a = this->world->ModelByName(model_name_1);
-    if (!model_a)
-      this->console.debug("Can not get model: " + model_name_1);
-    else
-      this->console.debug("Got model by name: " + model_name_1);
+
+    while (!model_a)
+    {
+      model_a = this->world->ModelByName(model_name_1);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    this->console.debug("Got model by name: " + model_name_1);
     
     physics::ModelPtr model_b = this->world->ModelByName(model_name_2);
-    if (!model_b)
-      this->console.debug("Can not get model: " + model_name_2);
-    else
-      this->console.debug("Got model by name: " + model_name_2);
-
+    while (!model_b)
+    {
+      model_b = this->world->ModelByName(model_name_2);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    this->console.debug("Got model by name: " + model_name_2);
+    
     im::AxisAlignedBox model_a_bbx = model_a->CollisionBoundingBox();
     this->console.debug("Getting model a bounding box");
     im::AxisAlignedBox model_b_bbx = model_b->CollisionBoundingBox();
