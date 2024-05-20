@@ -1,4 +1,4 @@
-#include "arvc_gazebo_ros_plugins/arvc_gazebo_ros_dataset_generator.h"
+#include "arvc_gazebo_ros_plugins/arvc_gazebo_ros_dataset_generator.hpp"
 #include "sdf_utils.hpp"
 #include "train_utils.hpp"
 #include "yaml_conversions.hpp"
@@ -19,8 +19,6 @@ namespace gazebo
     while (!gdb_attached) {
       sleep(1);
     }
-
-
 
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->cloud_I.reset(new PointCloudI);
@@ -59,10 +57,11 @@ namespace gazebo
   {
     boost::mutex mtx;
 
-    // this->world->Reset();
-
+    mtx.lock();
+    this->world->Reset();
     this->world->SetPhysicsEnabled(this->config["physics"].as<bool>());
-
+    this->world->SetPaused(true);
+    mtx.unlock();
     // this->insertSensorModel();
 
     std::vector<std::string> env_models;
@@ -72,30 +71,26 @@ namespace gazebo
     gazebo::common::Console::SetQuiet(true);
 
     bool first_run = true;
+    int items_to_generate = this->config["generator"]["items_to_generate"].as<int>();
     int env_change_iteration = this->config["environment"]["change_iteration"].as<int>();
     int par_change_iteration = this->config["paralellepipeds"]["change_iteration"].as<int>();
     int env_change_counter = 0;
     int par_change_counter = 0;
 
-    while (this->env_count < this->config["generator"]["items_to_generate"].as<int>())
+    while (this->env_count < items_to_generate)
     {
 
       if (first_run) {
         this->console.info("FIRST ENVIRONMENT GENERATION STARTING TO SPAWN MODELS...");
         this->ResumeEnvCount();
         this->insertSensorModel();
+
+        // Environment
         env_models = this->SpawnRandomEnviroment();
-        if (this->config["generator"]["paused"].as<bool>()) {
-          this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
-          std::getchar();
-        }
-        this->moveDownTillCollisionWithGround(env_models); // TODO
-        
-        if (this->config["generator"]["paused"].as<bool>()) {
-          this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
-          std::getchar();
-        }
+        // this->moveDownTillCollisionWithGround(env_models); // TODO
         env_change_counter++;
+
+        // Paralellepipeds
         par_models = this->SpawnRandomParalellepipeds();
         par_change_counter++;
 
@@ -206,13 +201,6 @@ namespace gazebo
     }
     this->console.debug("Sensor MODEL ready", GREEN);
 
-
-    this->console.debug("Waitting for generated data ready");
-    while (this->cloud_L->empty())
-    {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    this->console.debug("Sensor DATA ready", GREEN);
   }
 
   void DatasetGenerator::rotateSensorModel(){
@@ -373,10 +361,12 @@ namespace gazebo
         while (!this->world->ModelByName(model_name))
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
         this->console.debug("Inserta el modelo en el mundo: ");
-
-        std::string sensor_name = this->sensor_model->GetName();
         mtx.unlock();
         this->console.debug("Desbloquea el mutex: ");
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
+
+        std::string sensor_name = this->sensor_model->GetName();
+
         collision = this->checkCollisions(model_name, sensor_name);
         this->console.debug("Chequea colisiones PASSED: ");
 
@@ -493,15 +483,11 @@ namespace gazebo
     this->console.debug("model_a: " + model_name_1, RESET);
     this->console.debug("model_b: " + model_name_2, RESET);
 
-    boost::mutex mtx;
-
     physics::ModelPtr model_a;
     physics::ModelPtr model_b;
     im::AxisAlignedBox model_a_bbx;
     im::AxisAlignedBox model_b_bbx;
 
-
-    mtx.lock();
 
     do
     {
@@ -517,16 +503,16 @@ namespace gazebo
     } while (!model_b);
     this->console.debug("\tGot model b");
 
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
 
+
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+    // this->world->Step(1);
     this->console.debug("Getting models bounding boxes:");
     model_a_bbx = model_a->CollisionBoundingBox();
     this->console.debug("\tGot model a bounding box", RESET);
     model_b_bbx = model_b->CollisionBoundingBox();
     this->console.debug("\tGot model b bounding box", RESET);
 
-    mtx.unlock();
-    this->console.debug("Mutex unlocked");
 
     return model_a_bbx.Intersects(model_b_bbx);
   }
@@ -543,6 +529,12 @@ namespace gazebo
     ss << this->pcd_dir.string() << "/" << std::setfill('0') << std::setw(5) << this->env_count << ".pcd";
 
     this->console.info("Saving point cloud in: " + ss.str(), GREEN);
+
+    this->console.debug("Waitting for generated data ready");
+    while (this->cloud_L->empty())
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     if (!this->cloud_L->empty())
     {
