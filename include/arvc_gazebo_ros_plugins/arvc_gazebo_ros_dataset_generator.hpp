@@ -9,6 +9,7 @@
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/config.hpp>
 #include <yaml-cpp/yaml.h>
 
 // GAZEBO
