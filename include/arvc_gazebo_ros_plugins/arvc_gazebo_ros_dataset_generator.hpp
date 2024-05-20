@@ -118,6 +118,8 @@ namespace gazebo
     bool checkCollisions(std::string model_name_1, std::string model_name_2);
 
 
+    void removeModelsInCollision(std::vector<std::string> model_to_remove, std::string model_fixed);
+
     /// @brief Save last published cloud as a file in ".pcd"
     void SavePointCloud();
 

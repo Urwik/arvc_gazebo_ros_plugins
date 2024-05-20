@@ -2,24 +2,24 @@ physics: false
 debug: true
 
 generator:
-  paused: false
+  paused: true
   iteration_delay: 1000 #ms
-  items_to_generate: 10000
+  items_to_generate: 100
   ground_name: "ground_geom"
   data:
     save: true
-    out_dir: "/home/fran/datasets/test"
+    out_dir: "/home/arvc/datasets/test"
     binary: true
 
 sensor:
   name: "os1"
   topic: "/os1/pointCloud" #debe coincidir con el topic del sensor en el archivo sdf del sensor
-  model_path: "/home/fran/workSpaces/arvc_ws/src/arvc_gazebo_models/models/os1_cpu"
+  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/os1_gpu"
   collision_offset: 0.05 #m
 
 paralellepipeds:
-  item_count: 5
-  model_path: "/home/fran/workSpaces/arvc_ws/src/arvc_gazebo_models/models/BASE_MODELS/simple_block_v2"
+  item_count: 10
+  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/BASE_MODELS/simple_block_v2"
   change_iteration: 10 #randomize the models each X iteration. If 0, the models will not change
   length: [0.4, 3.0]
   width: [0.05, 0.3]
@@ -29,12 +29,13 @@ paralellepipeds:
     max: [7, 7, 7]
 
 environment:
-  item_count: 5
-  model_path: "/home/fran/workSpaces/arvc_ws/src/arvc_gazebo_models/models/pine_1"
+  item_count: 10
+  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/pine_1"
   change_iteration: 10 #randomize the models each X iteration. If 0, the models will not change
+  scale: [0.5, 3]
   length: [0.5, 3]
   width: [0.5, 3]
   height: [0.5, 3]
   position:
-    min: [-50, -50, 5]
-    max: [50, 50, 5]
+    min: [-50, -50, 0.1]
+    max: [50, 50, 0.1]

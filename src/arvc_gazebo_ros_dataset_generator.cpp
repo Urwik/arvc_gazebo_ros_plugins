@@ -14,11 +14,11 @@ namespace gazebo
 
   DatasetGenerator::DatasetGenerator()
   {
-    std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
-    bool gdb_attached = false;
-    while (!gdb_attached) {
-      sleep(1);
-    }
+    // std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
+    // bool gdb_attached = false;
+    // while (!gdb_attached) {
+    //   sleep(1);
+    // }
 
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->cloud_I.reset(new PointCloudI);
@@ -55,14 +55,10 @@ namespace gazebo
   // MAIN FUNCTION
   void DatasetGenerator::GenerateDataset()
   {
-    boost::mutex mtx;
 
-    mtx.lock();
     this->world->Reset();
     this->world->SetPhysicsEnabled(this->config["physics"].as<bool>());
     this->world->SetPaused(true);
-    mtx.unlock();
-    // this->insertSensorModel();
 
     std::vector<std::string> env_models;
     std::vector<std::string> par_models;
@@ -87,12 +83,19 @@ namespace gazebo
 
         // Environment
         env_models = this->SpawnRandomEnviroment();
+        this->world->Step(10);
+        this->removeModelsInCollision(env_models, this->sensor_model->GetName());
         // this->moveDownTillCollisionWithGround(env_models); // TODO
         env_change_counter++;
 
         // Paralellepipeds
         par_models = this->SpawnRandomParalellepipeds();
+        this->world->Step(10);
+        this->removeModelsInCollision(par_models, this->sensor_model->GetName());
         par_change_counter++;
+
+        this->world->SetPaused(false);
+        this->world->Step(10);
 
         if (this->config["generator"]["paused"].as<bool>()) {
           this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
@@ -113,7 +116,7 @@ namespace gazebo
             this->console.debug("Enviroment change iteration reached");
             this->removeModelsByName(env_models);
             env_models = this->SpawnRandomEnviroment();
-            this->moveDownTillCollisionWithGround(env_models);
+            // this->moveDownTillCollisionWithGround(env_models);
             env_change_counter = 0;
             this->console.debug("New Enviroment spawned");
           }
@@ -131,6 +134,9 @@ namespace gazebo
 
         this->rotateSensorModel();
         this->console.debug("Sensor rotated");
+
+        this->world->SetPaused(false);
+        this->world->Step(10);
 
         if (this->config["generator"]["paused"].as<bool>()) {
           this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
@@ -194,9 +200,9 @@ namespace gazebo
 
     while (!this->sensor_model)
     {
-      mtx.lock();
+      // mtx.lock();
       this->sensor_model = this->world->ModelByName(sensor_name);
-      mtx.unlock();
+      // mtx.unlock();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     this->console.debug("Sensor MODEL ready", GREEN);
@@ -316,6 +322,7 @@ namespace gazebo
     im::Vector2d height   = this->config["environment"]["height"].as<im::Vector2d>();
     im::Vector3d max_pos  = this->config["environment"]["position"]["max"].as<im::Vector3d>();
     im::Vector3d min_pos  = this->config["environment"]["position"]["min"].as<im::Vector3d>();
+    im::Vector2d scale_val = this->config["environment"]["scale"].as<im::Vector2d>();
 
 
     std::vector<std::string> model_names;
@@ -341,12 +348,14 @@ namespace gazebo
       this->console.debug("Setea el nombre del modelo: " + model_name);
 
       bool collision = true;
-      boost::mutex mtx;
-      do
-      {
+      // boost::mutex mtx;
+      // do
+      // {
         im::Vector3d position = utils::computeRandomPosition(min_pos, max_pos);
         this->console.debug("Genera una posicion aleatoria: ");
-        im::Vector3d scale = utils::computeRandomScale(length, width, height);
+        // im::Vector3d scale = utils::computeRandomScale(length, width, height);
+        im::Vector3d scale = utils::computeRandomScale(scale_val);
+
         this->console.debug("Genera una escala aleatoria: ");
 
         utils::setModelPosition(model_element, position);
@@ -354,40 +363,43 @@ namespace gazebo
         utils::setMeshScale(model_element, scale);
         this->console.debug("Setea la escala del modelo: ");
 
-        mtx.lock();
-        this->console.debug("Bloquea el mutex: ");        
+        // mtx.lock();
+        // this->console.debug("Bloquea el mutex: ");        
         this->world->InsertModelSDF(*temp_sdfFile);
         // Wait for model to be inserted
         while (!this->world->ModelByName(model_name))
-          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
         this->console.debug("Inserta el modelo en el mundo: ");
-        mtx.unlock();
-        this->console.debug("Desbloquea el mutex: ");
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
+        // mtx.unlock();
+        // this->console.debug("Desbloquea el mutex: ");
+        // boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
 
-        std::string sensor_name = this->sensor_model->GetName();
+        model_names.push_back(model_name);
 
-        collision = this->checkCollisions(model_name, sensor_name);
-        this->console.debug("Chequea colisiones PASSED: ");
+        // std::string sensor_name = this->sensor_model->GetName();
 
-        if (!collision)
-          model_names.push_back(model_name);
-        else
-        {
-          mtx.lock();
-          this->console.debug("Bloquea el mutex: ");
-          this->world->RemoveModel(model_name);
-          while(this->world->ModelByName(model_name))
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-          this->console.debug("Elimina el modelo: ");
-          mtx.unlock();
-          this->console.debug("Desbloquea el mutex: ");
+        // collision = this->checkCollisions(model_name, sensor_name);
+        // this->console.debug("Chequea colisiones PASSED: ");
+
+        // if (!collision)
+        //   model_names.push_back(model_name);
+        // else
+        // {
+        //   // mtx.lock();
+        //   this->console.debug("Bloquea el mutex: ");
+        //   this->world->RemoveModel(model_name);
+        //   while(this->world->ModelByName(model_name))
+        //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //   this->console.debug("Elimina el modelo: ");
+        //   // mtx.unlock();
+        //   this->console.debug("Desbloquea el mutex: ");
         }
 
-      } while (collision);
+      // } while (collision);
 
-    }
-    this->console.debug("PARALELLEPIPEDS SPAWNED CORRECTLY");
+    // }
+
+    this->console.debug("ENVIRONMENT SPAWNED CORRECTLY");
     return model_names;
   }
 
@@ -477,51 +489,64 @@ namespace gazebo
     }
   }
 
-  bool DatasetGenerator::checkCollisions(std::string model_name_1, std::string model_name_2)
+  bool DatasetGenerator::checkCollisions(std::string model_name_a, std::string model_name_b)
   {
     this->console.debug("-- CHECKING COLLISIONS", YELLOW);
-    this->console.debug("model_a: " + model_name_1, RESET);
-    this->console.debug("model_b: " + model_name_2, RESET);
-
+    this->console.debug("model_a: " + model_name_a, RESET);
+    this->console.debug("model_b: " + model_name_b, RESET);
     physics::ModelPtr model_a;
     physics::ModelPtr model_b;
     im::AxisAlignedBox model_a_bbx;
     im::AxisAlignedBox model_b_bbx;
 
-
     do
     {
-      model_a = this->world->ModelByName(model_name_1);
+      model_a = this->world->ModelByName(model_name_a);
       boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
     } while (!model_a);
     this->console.debug("\tGot model a");
     
     do
     {
-      model_b = this->world->ModelByName(model_name_2);
+      model_b = this->world->ModelByName(model_name_b);
       boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
     } while (!model_b);
     this->console.debug("\tGot model b");
 
+    // boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
 
-
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-    // this->world->Step(1);
+    std::mutex mtx;
+    mtx.lock();
     this->console.debug("Getting models bounding boxes:");
     model_a_bbx = model_a->CollisionBoundingBox();
     this->console.debug("\tGot model a bounding box", RESET);
     model_b_bbx = model_b->CollisionBoundingBox();
     this->console.debug("\tGot model b bounding box", RESET);
-
+    mtx.unlock();
 
     return model_a_bbx.Intersects(model_b_bbx);
   }
 
+  void DatasetGenerator::removeModelsInCollision(std::vector<std::string> model_to_remove, std::string model_fixed){
+    this->console.debug("REMOVING MODELS IN COLLISION...");
+    for (const std::string &model_name : model_to_remove)
+    {
+      if (this->checkCollisions(model_name, model_fixed))
+      {
+        this->console.debug("Collision detected with: " + model_name, RED);
+        this->world->RemoveModel(model_name);
+        while (this->world->ModelByName(model_name))
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        this->console.debug("Model removed: " + model_name);
+      }
+    }
 
+  }
 
   //---- POINTCLOUD -----------------------------------------------------//
   void DatasetGenerator::SavePointCloud() {
     this->console.debug("SAVING POINTCLOUD...");
+
 
     pcl::PCDWriter writer;
     std::stringstream ss;
@@ -530,9 +555,10 @@ namespace gazebo
 
     this->console.info("Saving point cloud in: " + ss.str(), GREEN);
 
+    this->world->SetPaused(false);
+    
     this->console.debug("Waitting for generated data ready");
-    while (this->cloud_L->empty())
-    {
+    while (this->cloud_L->empty()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
@@ -545,6 +571,7 @@ namespace gazebo
         this->cloud_L->height = 1;
       }
       writer.write<PointL>(ss.str(), *this->cloud_L, this->config["generator"]["data"]["binary"].as<bool>());
+      this->console.info("Point cloud saved", GREEN);
     }
     else
     {

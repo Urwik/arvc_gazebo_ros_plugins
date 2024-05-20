@@ -35,6 +35,25 @@ namespace utils
         return scale;
     }
 
+    im::Vector3d computeRandomScale(im::Vector2d _scale, std::string rand_mode="uniform")
+    {
+        im::Vector3d scale;
+        double scale_value = 1;
+
+        if (rand_mode == "uniform")
+            scale_value = im::Rand::DblUniform(_scale.X(), _scale.Y());
+        else if (rand_mode == "normal")
+            scale_value = im::Rand::DblNormal(0, _scale.Y() / 3); // 3 is a factor to adjust standard deviation
+        else
+            std::cout << "WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal" << std::endl;
+
+        scale.X() = scale_value;
+        scale.Y() = scale_value;
+        scale.Z() = scale_value;
+        
+        return scale;
+    }
+
     im::Vector3d computeRandomPosition(im::Vector3d min, im::Vector3d max, std::string rand_mode = "uniform")
     {
         im::Vector3d position;
