@@ -2,8 +2,8 @@ physics: false
 debug: true
 
 generator:
-  paused: true
-  iteration_delay: 1000 #ms
+  paused: false
+  iteration_delay: 1500 #ms
   items_to_generate: 100
   ground_name: "ground_geom"
   data:
@@ -14,7 +14,7 @@ generator:
 sensor:
   name: "os1"
   topic: "/os1/pointCloud" #debe coincidir con el topic del sensor en el archivo sdf del sensor
-  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/os1_gpu"
+  model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/os1_gpu" #cpu not working
   collision_offset: 0.05 #m
 
 paralellepipeds:
