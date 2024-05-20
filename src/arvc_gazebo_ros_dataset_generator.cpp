@@ -14,11 +14,11 @@ namespace gazebo
 
   DatasetGenerator::DatasetGenerator()
   {
-    // std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
-    // bool gdb_attached = false;
-    // while (!gdb_attached) {
-    //   sleep(1);
-    // }
+    std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
+    bool gdb_attached = false;
+    while (!gdb_attached) {
+      sleep(1);
+    }
 
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->cloud_I.reset(new PointCloudI);
@@ -70,6 +70,8 @@ namespace gazebo
     int items_to_generate = this->config["generator"]["items_to_generate"].as<int>();
     int env_change_iteration = this->config["environment"]["change_iteration"].as<int>();
     int par_change_iteration = this->config["paralellepipeds"]["change_iteration"].as<int>();
+    bool env_move = this->config["environment"]["move"].as<bool>();
+    bool par_move = this->config["paralellepipeds"]["move"].as<bool>();
     int env_change_counter = 0;
     int par_change_counter = 0;
 
@@ -120,6 +122,11 @@ namespace gazebo
             env_change_counter = 0;
             this->console.debug("New Enviroment spawned");
           }
+          else
+          {
+            if (env_move)
+              this->moveEnvironmentRandomly(env_models);
+          }
         }
 
         if (par_change_iteration != 0){
@@ -129,6 +136,11 @@ namespace gazebo
             par_models = this->SpawnRandomParalellepipeds();
             par_change_counter = 0;
             this->console.debug("New Paralellepipeds spawned");
+          }
+          else
+          {
+            if (par_move)
+              this->moveParallellepipedRandomly(par_models);
           }
         }
 
@@ -221,6 +233,7 @@ namespace gazebo
     this->sensor_model->SetWorldPose(new_pose);
     mtx.unlock();
   }
+
 
   void DatasetGenerator::removeModelsByName(std::vector<std::string> models)
   {
@@ -401,6 +414,70 @@ namespace gazebo
 
     this->console.debug("ENVIRONMENT SPAWNED CORRECTLY");
     return model_names;
+  }
+
+
+  void DatasetGenerator::moveEnvironmentRandomly(std::vector<std::string> model_names){
+
+    for (std::string tmp_model_name : model_names) {
+      physics::ModelPtr tmp_model;
+
+      do {
+        tmp_model = this->world->ModelByName(tmp_model_name);
+      } while (!tmp_model);
+
+      im::Vector3d max_pos  = this->config["environment"]["position"]["max"].as<im::Vector3d>();
+      im::Vector3d min_pos  = this->config["environment"]["position"]["min"].as<im::Vector3d>();
+      im::Vector3d position = utils::computeRandomPosition(min_pos, max_pos);
+
+      im::Pose3d tmp_pose = tmp_model->WorldPose();
+      tmp_pose.Pos() = position;
+
+      this->world->SetPaused(true); 
+
+      while (!this->world->IsPaused()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      
+      tmp_model->SetWorldPose(tmp_pose);
+      this->world->SetPaused(false);
+
+      while (this->world->IsPaused()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      
+
+    }
+    
+  }
+
+  void DatasetGenerator::moveParallellepipedRandomly(std::vector<std::string> model_names){
+
+    for (std::string tmp_model_name : model_names) {
+      physics::ModelPtr tmp_model;
+
+      do {
+        tmp_model = this->world->ModelByName(tmp_model_name);
+      } while (!tmp_model);
+
+      im::Vector3d max_pos  = this->config["paralellepipeds"]["position"]["max"].as<im::Vector3d>();
+      im::Vector3d min_pos  = this->config["paralellepipeds"]["position"]["min"].as<im::Vector3d>();
+      im::Pose3d tmp_pose = utils::computeRandomPose(min_pos, max_pos);
+     
+      this->world->SetPaused(true); 
+
+      while (!this->world->IsPaused()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      
+      tmp_model->SetWorldPose(tmp_pose);
+      this->world->SetPaused(false);
+
+      while (this->world->IsPaused()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      
+    }
   }
 
   void DatasetGenerator::moveDownTillCollisionWithGround(std::vector<std::string> model_name)

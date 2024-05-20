@@ -103,8 +103,12 @@ namespace gazebo
     /// @brief Insert unlabeled models as a perturbations to the world
     std::vector<std::string> SpawnRandomEnviroment();
 
+    void moveEnvironmentRandomly(std::vector<std::string> model_names);
 
-  void moveDownTillCollisionWithGround(std::vector<std::string>  model_name);
+    void moveParallellepipedRandomly(std::vector<std::string> model_names);
+
+
+    void moveDownTillCollisionWithGround(std::vector<std::string>  model_name);
 
 
     /// @brief Check output directories format, and create if don't exists
