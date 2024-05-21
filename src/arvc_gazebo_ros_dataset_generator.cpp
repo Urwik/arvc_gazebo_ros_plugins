@@ -14,11 +14,11 @@ namespace gazebo
 
   DatasetGenerator::DatasetGenerator()
   {
-    std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
-    bool gdb_attached = false;
-    while (!gdb_attached) {
-      sleep(1);
-    }
+    // std::cout << "Delay to enable the attach gdb vscode debug" << std::endl;
+    // bool gdb_attached = false;
+    // while (!gdb_attached) {
+    //   sleep(1);
+    // }
 
     cout << RED << "Running Plugin Constructor..." << RESET << endl;
     this->cloud_I.reset(new PointCloudI);
@@ -58,6 +58,8 @@ namespace gazebo
 
     this->world->Reset();
     this->world->SetPhysicsEnabled(this->config["physics"].as<bool>());
+    bool physics_enabled = this->world->PhysicsEnabled();
+    this->console.debug("Physics enabled: " + std::to_string(physics_enabled));
     this->world->SetPaused(true);
 
     std::vector<std::string> env_models;
@@ -106,6 +108,10 @@ namespace gazebo
 
         if (this->config["generator"]["data"]["save"].as<bool>())
           this->SavePointCloud();
+
+        this->console.info("FIRST ENVIRONMENT GENERATED", GREEN);
+        this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
+        std::getchar();
 
         first_run = false;
       }
@@ -161,8 +167,6 @@ namespace gazebo
         env_change_counter++;
         par_change_counter++;
         this->env_count++;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(this->config["generator"]["iteration_delay"].as<int>()));
       }
     }
     this->console.info("FINISHED GENERATING DATASET", GREEN);
@@ -419,6 +423,13 @@ namespace gazebo
 
   void DatasetGenerator::moveEnvironmentRandomly(std::vector<std::string> model_names){
 
+    this->world->SetPaused(true); 
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    
+    im::Vector3d max_pos  = this->config["environment"]["position"]["max"].as<im::Vector3d>();
+    im::Vector3d min_pos  = this->config["environment"]["position"]["min"].as<im::Vector3d>();
+
+
     for (std::string tmp_model_name : model_names) {
       physics::ModelPtr tmp_model;
 
@@ -426,32 +437,28 @@ namespace gazebo
         tmp_model = this->world->ModelByName(tmp_model_name);
       } while (!tmp_model);
 
-      im::Vector3d max_pos  = this->config["environment"]["position"]["max"].as<im::Vector3d>();
-      im::Vector3d min_pos  = this->config["environment"]["position"]["min"].as<im::Vector3d>();
       im::Vector3d position = utils::computeRandomPosition(min_pos, max_pos);
 
       im::Pose3d tmp_pose = tmp_model->WorldPose();
       tmp_pose.Pos() = position;
 
-      this->world->SetPaused(true); 
-
-      while (!this->world->IsPaused()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
       tmp_model->SetWorldPose(tmp_pose);
-      this->world->SetPaused(false);
-
-      while (this->world->IsPaused()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      
-
     }
+
+    this->world->SetPaused(false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     
   }
 
   void DatasetGenerator::moveParallellepipedRandomly(std::vector<std::string> model_names){
+
+    this->world->SetPaused(true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+
+    im::Vector3d max_pos  = this->config["paralellepipeds"]["position"]["max"].as<im::Vector3d>();
+    im::Vector3d min_pos  = this->config["paralellepipeds"]["position"]["min"].as<im::Vector3d>();
 
     for (std::string tmp_model_name : model_names) {
       physics::ModelPtr tmp_model;
@@ -460,24 +467,15 @@ namespace gazebo
         tmp_model = this->world->ModelByName(tmp_model_name);
       } while (!tmp_model);
 
-      im::Vector3d max_pos  = this->config["paralellepipeds"]["position"]["max"].as<im::Vector3d>();
-      im::Vector3d min_pos  = this->config["paralellepipeds"]["position"]["min"].as<im::Vector3d>();
       im::Pose3d tmp_pose = utils::computeRandomPose(min_pos, max_pos);
      
-      this->world->SetPaused(true); 
-
-      while (!this->world->IsPaused()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
       tmp_model->SetWorldPose(tmp_pose);
-      this->world->SetPaused(false);
-
-      while (this->world->IsPaused()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      
     }
+    
+    this->world->SetPaused(false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
   }
 
   void DatasetGenerator::moveDownTillCollisionWithGround(std::vector<std::string> model_name)
@@ -632,11 +630,14 @@ namespace gazebo
 
     this->console.info("Saving point cloud in: " + ss.str(), GREEN);
 
+    int ms_delay = this->config["generator"]["iteration_delay"].as<int>();
+
     this->world->SetPaused(false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms_delay));
     
     this->console.debug("Waitting for generated data ready");
     while (this->cloud_L->empty()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     if (!this->cloud_L->empty())
@@ -654,6 +655,10 @@ namespace gazebo
     {
       this->console.info("Cloud is empty", RED);
     }
+
+    this->world->SetPaused(true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
   }
 
 
