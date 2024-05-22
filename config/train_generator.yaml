@@ -4,11 +4,11 @@ debug: true
 generator:
   paused: false
   iteration_delay: 1500 #ms
-  items_to_generate: 100000000
+  items_to_generate: 1000
   ground_name: "ground_geom"
   data:
     save: true
-    out_dir: "/home/arvc/datasets/test"
+    out_dir: "/home/arvc/datasets/retTruss/01"
     binary: true
 
 sensor:
@@ -18,9 +18,10 @@ sensor:
   collision_offset: 0.05 #m
 
 paralellepipeds:
-  item_count: 40
+  item_count: 70
   model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/BASE_MODELS/simple_block_v2"
   move: true
+  label_per_face: true
   change_iteration: 100 #randomize the models each X iteration. If 0, the models will not change
   length: [0.4, 3.0]
   width: [0.05, 0.3]

@@ -289,7 +289,11 @@ namespace gazebo
       std::string model_name = "paralellepiped_" + std::to_string(i);
 
       utils::setModelName(model_element, model_name);
-      utils::setLaserRetroForVisualElement(model_element, laser_retro_count);
+
+      if (this->config["paralellepipeds"]["label_per_face"].as<bool>())
+        laser_retro_count = utils::setIncrementalLaserRetroForVisualElement(model_element, laser_retro_count);
+      else
+        utils::setLaserRetroForVisualElement(model_element, laser_retro_count);
       
       bool collision = true;
       boost::mutex mtx;

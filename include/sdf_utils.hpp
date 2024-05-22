@@ -190,4 +190,23 @@ namespace utils
             visualElement = visualElement->GetNextElement("visual");
         }
     }
+
+        /////////////////////////////////
+    int setIncrementalLaserRetroForVisualElement(sdf::ElementPtr model, const int start_value)
+    {
+        sdf::ElementPtr linkElement = model->GetElement("link");
+        sdf::ElementPtr visualElement = linkElement->GetElement("visual");
+        int retro_value = start_value;
+
+        while (visualElement)
+        {
+            sdf::ElementPtr retroElement = visualElement->GetElement("laser_retro");
+            retroElement->Set<int>(retro_value);
+
+            retro_value++;
+            visualElement = visualElement->GetNextElement("visual");
+        }
+
+        return retro_value;
+    }
 } // namespace utils
