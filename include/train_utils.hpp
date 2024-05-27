@@ -114,7 +114,16 @@ namespace utils
 
 
 
+    std::vector<std::string> removeFromVector(std::vector<std::string> original_models, std::vector<std::string> model_to_remove) {
 
+        for (auto model_name : model_to_remove) {
+        auto it = std::find(original_models.begin(), original_models.end(), model_name);
+        if (it != original_models.end()) {
+            original_models.erase(it);
+        }
+        }
+        return original_models;
+    }
 
 
     // //////////////////////////////////////////////////////////////////////////////
