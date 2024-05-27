@@ -91,6 +91,8 @@ namespace gazebo
 
     void rotateSensorModel();
 
+    void changeSensorHeight();
+
     /**
      * @brief Remove models
      * @param models Vector of strings with model names
@@ -121,8 +123,13 @@ namespace gazebo
 
     bool checkCollisions(std::string model_name_1, std::string model_name_2);
 
-
-    void removeModelsInCollision(std::vector<std::string> model_to_remove, std::string model_fixed);
+    /**
+     * @brief Remove models in collision with a fixed model
+     * @param model_to_remove Vector of strings with model names to remove
+     * @param model_fixed String with model name to check collision
+     * @return Vector of strings with model names removed
+    */
+    std::vector<std::string> removeModelsInCollision(std::vector<std::string> model_to_remove, std::string model_fixed);
 
     /// @brief Save last published cloud as a file in ".pcd"
     void SavePointCloud();
