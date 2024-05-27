@@ -36,10 +36,7 @@ ignition::math::Pose3d ComputeRandomPose(std::string _mode, ignition::math::Vect
         rotation.Y() = Rand::DblNormal(0, 2*M_PI/3);
         rotation.Z() = Rand::DblNormal(0, 2*M_PI/3);
     }
-    else
-    {
-        ROS_ERROR("WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal");
-    }
+
 
     position = position + _origin;
     // position = this->ApplyOffset(position);
@@ -80,10 +77,7 @@ ignition::math::Pose3d ComputeRandomPose(std::string _mode, ignition::math::Vect
         rotation.Y() = Rand::DblNormal(0, 2*M_PI/3);
         rotation.Z() = Rand::DblNormal(0, 2*M_PI/3);
     }
-    else
-    {
-        ROS_ERROR("WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal");
-    }
+
     // position = this->ApplyOffset(position);
     pose.Set(position, rotation);
 
@@ -108,20 +102,27 @@ ignition::math::Pose3d ComputeRandomPose(std::string _mode, ignition::math::Vect
           }
 
           catch(const std::exception& e){
-            ROS_WARN("CAN'T READ FILE: %s", entry.path().string().c_str());
           }
         }
       }
 
-      ROS_INFO( "Starting in Env: %d", last_num);
       return last_num;
     }
     else {
-      ROS_INFO( "Starting in Env: %d", last_num);
       return last_num;
     }
   }
 
 
+  std::vector<std::string> removeFromVector(std::vector<std::string> original_models, std::vector<std::string> model_to_remove) {
+
+    for (auto model_name : model_to_remove) {
+      auto it = std::find(original_models.begin(), original_models.end(), model_name);
+      if (it != original_models.end()) {
+        original_models.erase(it);
+      }
+    }
+    return original_models;
+  }
 
 } // namespace utils
