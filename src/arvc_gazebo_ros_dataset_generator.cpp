@@ -87,19 +87,16 @@ namespace gazebo
 
         // Environment
         env_models = this->SpawnRandomEnviroment();
-        // this->world->Step(10);
-        this->removeModelsInCollision(env_models, this->sensor_model->GetName());
-        // this->moveDownTillCollisionWithGround(env_models); // TODO
+        env_models = this->removeModelsInCollision(env_models, this->sensor_model->GetName());
         env_change_counter++;
 
         // Paralellepipeds
         par_models = this->SpawnRandomParalellepipeds();
-        // this->world->Step(10);
-        this->removeModelsInCollision(par_models, this->sensor_model->GetName());
+        par_models = this->removeModelsInCollision(par_models, this->sensor_model->GetName());
         par_change_counter++;
 
+
         this->world->SetPaused(false);
-        // this->world->Step(10);
 
         if (this->config["generator"]["paused"].as<bool>()) {
           this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
@@ -120,7 +117,6 @@ namespace gazebo
             this->console.debug("Enviroment change iteration reached");
             this->removeModelsByName(env_models);
             env_models = this->SpawnRandomEnviroment();
-            this->removeModelsInCollision(env_models, this->sensor_model->GetName());
 
             // this->moveDownTillCollisionWithGround(env_models);
             env_change_counter = 0;
@@ -138,12 +134,12 @@ namespace gazebo
             this->console.debug("Paralellepipeds change iteration reached");
             this->removeModelsByName(par_models);
             par_models = this->SpawnRandomParalellepipeds();
-            this->removeModelsInCollision(par_models, this->sensor_model->GetName());
             par_change_counter = 0;
             this->console.debug("New Paralellepipeds spawned");
           }
           else
           {
+
             if (par_move)
               this->moveParallellepipedRandomly(par_models);
           }
@@ -151,9 +147,14 @@ namespace gazebo
 
         this->rotateSensorModel();
         this->console.debug("Sensor rotated");
+        this->changeSensorHeight();
+        this->console.debug("Sensor height changed");
+        env_models = this->removeModelsInCollision(env_models, this->sensor_model->GetName());
+        par_models = this->removeModelsInCollision(par_models, this->sensor_model->GetName());
+        this->console.debug("Models in collision removed");
 
         this->world->SetPaused(false);
-        this->world->Step(10);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
         if (this->config["generator"]["paused"].as<bool>()) {
           this->console.info("## PAUSED ##: Press enter to continue ...", YELLOW);
@@ -225,16 +226,37 @@ namespace gazebo
   }
 
   void DatasetGenerator::rotateSensorModel(){
-    boost::mutex mtx;
+    
+    this->world->SetPaused(true);
+    this->console.debug("ROTATING SENSOR MODEL...");
 
     im::Pose3d new_pose;
     im::Vector3d rotation = utils::computeRandomRotation();
 
-    mtx.lock();
     im::Pose3d orig_pose = this->sensor_model->WorldPose();
     new_pose.Set(orig_pose.Pos(), rotation);
     this->sensor_model->SetWorldPose(new_pose);
-    mtx.unlock();
+
+    this->world->SetPaused(false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  void DatasetGenerator::changeSensorHeight() {
+    this->world->SetPaused(true);
+
+    im::Pose3d new_pose;
+    im::Vector3d position = this->sensor_model->WorldPose().Pos();
+    im::Vector2d height_range = this->config["sensor"]["height"].as<im::Vector2d>();
+
+    float new_height = im::Rand::DblUniform(height_range.X(), height_range.Y());
+    position.Z() = new_height;
+
+    im::Pose3d orig_pose = this->sensor_model->WorldPose();
+    new_pose.Set(position, orig_pose.Rot());
+    this->sensor_model->SetWorldPose(new_pose);
+
+    this->world->SetPaused(false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
 
@@ -386,7 +408,9 @@ namespace gazebo
 
   void DatasetGenerator::moveEnvironmentRandomly(std::vector<std::string> model_names){
 
-    this->world->SetPaused(true); 
+    this->world->SetPaused(true);
+    this->console.debug("Moving Enviroment randomly");
+
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     
     im::Vector3d max_pos  = this->config["environment"]["position"]["max"].as<im::Vector3d>();
@@ -417,6 +441,8 @@ namespace gazebo
   void DatasetGenerator::moveParallellepipedRandomly(std::vector<std::string> model_names){
 
     this->world->SetPaused(true);
+    this->console.debug("Moving Paralellepipeds randomly");
+
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
 
@@ -565,13 +591,21 @@ namespace gazebo
     return model_a_bbx.Intersects(model_b_bbx);
   }
 
-  void DatasetGenerator::removeModelsInCollision(std::vector<std::string> model_to_remove, std::string model_fixed){
+  std::vector<std::string> DatasetGenerator::removeModelsInCollision(std::vector<std::string> original_models, std::string model_fixed){
+    
+    this->world->SetPaused(true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     this->console.debug("REMOVING MODELS IN COLLISION...");
-    for (const std::string &model_name : model_to_remove)
+    
+    std::vector<std::string> removed_models;
+    std::vector<std::string> new_models;
+    
+    for (const std::string &model_name : original_models)
     {
       if (this->checkCollisions(model_name, model_fixed))
       {
         this->console.debug("Collision detected with: " + model_name, RED);
+        removed_models.push_back(model_name);
         this->world->RemoveModel(model_name);
         while (this->world->ModelByName(model_name))
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -579,6 +613,12 @@ namespace gazebo
       }
     }
 
+    new_models = utils::removeFromVector(original_models, removed_models);
+
+    this->world->SetPaused(false);
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    return new_models;
   }
 
   //---- POINTCLOUD -----------------------------------------------------//
