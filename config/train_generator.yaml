@@ -8,7 +8,7 @@ generator:
   ground_name: "ground_geom"
   data:
     save: true
-    out_dir: "/home/arvc/datasets/retTruss/02"
+    out_dir: "/home/arvc/datasets/retTruss/03"
     binary: true
 
 sensor:
@@ -20,7 +20,7 @@ sensor:
     x: 0
     y: 0
     z: 0.5
-  height: [0.5, 10]
+  height: [5, 10]
 
 paralellepipeds:
   item_count: 70
@@ -32,8 +32,8 @@ paralellepipeds:
   width: [0.05, 0.3]
   height: [0.05, 0.3]
   position:
-    min: [-7, -7, -1]
-    max: [7, 7, 7]
+    min: [-7, -7, 5]
+    max: [7, 7, 15]
 
 environment:
   item_count: 30
