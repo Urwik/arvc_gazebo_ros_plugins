@@ -327,6 +327,7 @@ namespace gazebo
       while (!this->world->ModelByName(model_name))
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
+      this->console.debug("Model inserted: " + model_name);
       model_names.push_back(model_name);
       laser_retro_count++;
 

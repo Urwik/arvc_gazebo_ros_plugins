@@ -8,7 +8,7 @@ generator:
   ground_name: "ground_geom"
   data:
     save: true
-    out_dir: "/home/arvc/datasets/retTruss/03"
+    out_dir: "/home/arvc/datasets/retTruss/09"
     binary: true
 
 sensor:
@@ -20,10 +20,10 @@ sensor:
     x: 0
     y: 0
     z: 0.5
-  height: [5, 10]
+  height: [1, 2]
 
 paralellepipeds:
-  item_count: 70
+  item_count: 100
   model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/BASE_MODELS/simple_block_v2"
   move: true
   label_per_face: true
@@ -32,11 +32,11 @@ paralellepipeds:
   width: [0.05, 0.3]
   height: [0.05, 0.3]
   position:
-    min: [-7, -7, 5]
-    max: [7, 7, 15]
+    min: [-10, -10, -1]
+    max: [10, 10, 5]
 
 environment:
-  item_count: 30
+  item_count: 50
   model_path: "/home/arvc/workSpaces/arvc_ws/src/arvc_gazebo_models/models/pine_1"
   move: true
   change_iteration: 100 #randomize the models each X iteration. If 0, the models will not change
