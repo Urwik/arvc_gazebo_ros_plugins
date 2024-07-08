@@ -87,10 +87,13 @@ include_directories(
 
 ## Declare a C++ library
 add_library(arvc_gazebo_ros_dataset_generator src/arvc_gazebo_ros_dataset_generator.cpp)
-target_link_libraries(arvc_gazebo_ros_dataset_generator ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Eigen_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} ${Boost_LIBRARIES} ) 
+target_link_libraries(arvc_gazebo_ros_dataset_generator ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Eigen_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} ${Boost_LIBRARIES}) 
+
+add_library(arvc_gazebo_ros_test_generator src/arvc_gazebo_ros_test_generator.cpp)
+target_link_libraries(arvc_gazebo_ros_test_generator ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Eigen_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} ${Boost_LIBRARIES}) 
 
 add_library(arvc_gazebo_ros_world_tf src/arvc_gazebo_ros_world_tf.cpp)
-target_link_libraries(arvc_gazebo_ros_world_tf ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES} ${SDFormat_LIBRARIES} )  
+target_link_libraries(arvc_gazebo_ros_world_tf ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES} ${SDFormat_LIBRARIES})  
 
 # add_library(arvc_gazebo_ros_model_move src/arvc_gazebo_ros_model_move.cpp)
 # target_link_libraries(arvc_gazebo_ros_model_move ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES} ) 
@@ -105,5 +108,5 @@ target_link_libraries(arvc_gazebo_ros_world_tf ${catkin_LIBRARIES} ${GAZEBO_LIBR
 # target_link_libraries(model_collision_detector ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES})
 
 
-# add_executable(main src/main.cpp)
-# target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES}) 
+add_executable(main src/main.cpp)
+target_link_libraries(main ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${Qt5Core_LIBRARIES} ${YAML_CPP_LIBRARIES}) 

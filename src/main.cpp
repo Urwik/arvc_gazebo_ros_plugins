@@ -1,23 +1,18 @@
 #include <iostream>
-#include <filesystem>
-#include <ignition/math.hh>
+#include <sstream>
+#include <vector>
+#include <string>
 
-
-namespace fs = std::filesystem;
-using namespace std;
-namespace im = ignition::math;
+#include "test_utils.hpp"
 
 int main(int argc, char** argv)
 {
-    string package_path =  ros::package::getPath("arvc_dataset_generator");
-    fs::path path( package_path + "/config/dataset_generator_config.yaml");
+    std::string line = "crossed_444_2.500.15_TIUS";
 
+    std::vector<std::string> tokens = utils::splitString(line, '_');
 
-    for (size_t i = 0; i < 100; i++)
-    {
-        cout << im::Rand::DblNormal(0, 1) << endl; 
-    }
+    std::string structure_offset = tokens[2].substr(0, 4);
 
-
+    std::cout << "Value: " << std::stod(structure_offset) << std::endl;
     return 0;
 }
