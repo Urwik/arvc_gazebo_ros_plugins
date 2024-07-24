@@ -74,6 +74,9 @@ namespace gazebo
         int items_to_generate = this->config["generator"]["items_to_generate"].as<int>();
         int env_change_iteration = this->config["environment"]["change_iteration"].as<int>();
         bool env_move = this->config["environment"]["move"].as<bool>();
+        bool sensor_move = this->config["sensor"]["move"].as<bool>();
+        // bool sensor_move = false;
+
         int env_change_counter = 0;
 
         this->world->SetPaused(true);
@@ -92,10 +95,12 @@ namespace gazebo
                 env_models = this->SpawnRandomEnviroment();
                 env_models = this->removeModelsInCollision(env_models, this->structure_model->GetName());
 
-                do
-                {
-                    this->moveSensorRandomly();
-                } while (this->checkSensorCollisionWithStructure());
+                if (sensor_move) {
+                    do
+                    {
+                        this->moveSensorRandomly();
+                    } while (this->checkSensorCollisionWithStructure());
+                }
 
                 env_change_counter++;
 
@@ -139,10 +144,13 @@ namespace gazebo
                     }
                 }
 
-                do
-                {
-                    this->moveSensorRandomly();
-                } while (this->checkSensorCollisionWithStructure());
+                if (sensor_move) {
+                    do
+                    {
+                        this->moveSensorRandomly();
+                    } while (this->checkSensorCollisionWithStructure());
+                }
+
 
                 this->world->SetPaused(false);
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -184,35 +192,36 @@ namespace gazebo
     {
         this->console.debug("GETTING STRUCTURE MODEL...");
 
-        physics::Model_V model_vector = this->world->Models();
-        std::string structure_name;
-        std::vector<std::string> tokens;
-        for (physics::ModelPtr model : model_vector)
-        {
-            this->console.debug("Is this model the structure?: " + model->GetName());
-            std::string tmp_name = model->GetName();
-            try {
-                tokens = utils::splitString(tmp_name, '_');
-                tmp_name = tokens[0];
-            }
-            catch(const std::exception& e) {
-                std::cerr << e.what() << '\n';
-            }
+        std::string structure_name = this->config["structure"]["model_name"].as<std::string>();
+        
+        // physics::Model_V model_vector = this->world->Models();
+        // std::vector<std::string> tokens;
 
-            if (tmp_name == "orthogonal" || tmp_name == "crossed") {
-                this->console.debug("Structure model found: " + model->GetName(), GREEN);
-                structure_name = model->GetName();
-                std::string structure_offset = tokens[2].substr(0, 4);
-                this->config["structure"]["z_offset"] = std::stod(structure_offset);
-                break;
-            }
-        }
+        // for (physics::ModelPtr model : model_vector)
+        // {
+        //     this->console.debug("Is this model the structure?: " + model->GetName());
+        //     std::string tmp_name = model->GetName();
+        //     try {
+        //         tokens = utils::splitString(tmp_name, '_');
+        //         tmp_name = tokens[0];
+        //     }
+        //     catch(const std::exception& e) {
+        //         std::cerr << e.what() << '\n';
+        //     }
 
-        while (!this->structure_model)
-        {
+        //     if (tmp_name == "orthogonal" || tmp_name == "crossed") {
+        //         this->console.debug("Structure model found: " + model->GetName(), GREEN);
+        //         structure_name = model->GetName();
+        //         std::string structure_offset = tokens[2].substr(0, 4);
+        //         this->config["structure"]["z_offset"] = std::stod(structure_offset);
+        //         break;
+        //     }
+        // }
+        do {
             this->structure_model = this->world->ModelByName(structure_name);
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
+        } while (!this->structure_model);
+
         this->console.debug("STRUCTURE MODEL ready", GREEN);
     }
 

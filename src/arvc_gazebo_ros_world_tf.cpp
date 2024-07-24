@@ -100,7 +100,7 @@ namespace gazebo
       mtx.lock();
       this->world_pose = this->model->WorldPose();
       mtx.unlock();
-      this->console.debug("Got world pose", GREEN);
+      // this->console.debug("Got world pose", GREEN);
 
       transform.transform.translation.x = this->world_pose.Pos().X();
       transform.transform.translation.y = this->world_pose.Pos().Y();
