@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   pcl_ros
   tf2_ros
+  arvc_utils
 )
 
 find_package(Boost REQUIRED)
@@ -106,6 +107,33 @@ target_link_libraries(arvc_gazebo_ros_model_move_v2 ${catkin_LIBRARIES} ${GAZEBO
 
 add_library(model_collision_detector src/arvc_gazebo_model_collision_detector.cpp)
 target_link_libraries(model_collision_detector ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${Threads_LIBRARIES})
+
+
+add_library(arvc_poi_orbit src/arvc_poi_orbita.cpp)
+target_link_libraries(arvc_poi_orbit ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${PCL_LIBRARIES} ${YAML_CPP_LIBRARIES} )
+# Define the project path as a compile definition
+target_compile_definitions(arvc_poi_orbit PRIVATE
+    PROJECT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    CONFIG_FILE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/arvc_poi_orbita.yaml"
+)
+
+find_package (Qt5Widgets REQUIRED)
+find_package (Qt5Core REQUIRED)
+include_directories(SYSTEM ${GAZEBO_INCLUDE_DIRS} ${Qt5Core_INCLUDE_DIRS})
+link_directories(${GAZEBO_LIBRARY_DIRS})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
+
+# list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
+
+add_library(system_gui SHARED src/simple_gui.cpp)
+target_link_libraries(system_gui ${GAZEBO_LIBRARIES} ${YAML_CPP_LIBRARIES})
+    # ${Qt5Core_LIBRARIES}
+    # ${Qt5Widgets_LIBRARIES}
+    # ${PROTOBUF_LIBRARIES} )
+target_compile_definitions(system_gui PRIVATE
+    PROJECT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    CONFIG_FILE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/arvc_poi_orbita.yaml"
+)
 
 
 # add_executable(main src/main.cpp)

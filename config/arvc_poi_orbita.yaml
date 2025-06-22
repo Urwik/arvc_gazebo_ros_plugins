@@ -1,0 +1,27 @@
+model_name: "ouster_OS1"
+orbit_radius: 5.0
+orbit_height: 2.0
+orbit_center:
+  x: 0.0
+  y: 0.0
+  z: 1.7
+orbit_direction: "clockwise"
+angular_speed: 0.1
+
+camera:
+  enable_follow: false
+  follow_model: "ouster_OS1"
+  follow_offset:
+    x: 0.0
+    y: 0.0
+    z: 1.
+  look_at_model: false
+
+  orbit_radius: 8.0
+  orbit_height: 3.0
+  orbit_center:
+    x: 0.0
+    y: 0.0
+    z: 1.7
+  orbit_direction: "clockwise"
+  angular_speed: 0.1
