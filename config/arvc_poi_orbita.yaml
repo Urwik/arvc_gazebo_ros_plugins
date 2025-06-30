@@ -1,12 +1,12 @@
 model_name: "ouster_OS1"
-orbit_radius: 5.0
-orbit_height: 2.0
+orbit_radius: 2.0
+orbit_height: 1.0
 orbit_center:
   x: 0.0
   y: 0.0
-  z: 1.7
+  z: 0.5
 orbit_direction: "clockwise"
-angular_speed: 0.1
+angular_speed: 0.2
 
 camera:
   enable_follow: false

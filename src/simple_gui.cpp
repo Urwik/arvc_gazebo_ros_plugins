@@ -137,11 +137,11 @@ private:
 
             if (this->userCam)
             {
-                // Enable saving frames
-                this->userCam->EnableSaveFrame(true);
+                // // Enable saving frames
+                // this->userCam->EnableSaveFrame(true);
 
-                // Specify the path to save frames into
-                this->userCam->SetSaveFramePathname("/tmp/gazebo_frames");
+                // // Specify the path to save frames into
+                // this->userCam->SetSaveFramePathname("/tmp/gazebo_frames");
 
                 std::cout << "User camera initialized: " << this->userCam->Name() << "\n";
                 

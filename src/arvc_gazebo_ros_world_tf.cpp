@@ -82,9 +82,9 @@ namespace gazebo
 
     std::mutex mtx;
 
-    while (!this->model) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    // while (!this->model) {
+    //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // }
 
     int seq = 0;
     while(true)

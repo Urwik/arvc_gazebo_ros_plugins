@@ -47,8 +47,8 @@ namespace gazebo
             this->world = _parent;
             // Listen to the update event. This event is broadcast every
             // simulation iteration.
-            this->updateConnection = event::Events::ConnectWorldUpdateBegin(
-                std::bind(&POIOrbit::OnUpdate, this));
+            // this->updateConnection = event::Events::ConnectWorldUpdateBegin(
+            //     std::bind(&POIOrbit::OnUpdate, this));
 
             // this->usr_camera = gui::get_active_camera();
         }
@@ -84,7 +84,7 @@ namespace gazebo
             std::string direction = this->clockwise ? "clockwise" : "counterclockwise";
             this->custom_console.debug("Orbit direction: " + direction, utils::Console::BLUE);
 
-
+            this->run_thread = boost::thread(&POIOrbit::RunOrbitThread, this);
         }
 
     public:
@@ -108,15 +108,26 @@ namespace gazebo
         void RunOrbitThread()
         {
             this->custom_console.debug("Orbit thread started.", utils::Console::GREEN);
-            
-            while (this->threadRunning)
-            {
 
-                if (!this->modelsFound)
+            while (!this->model)
+            {
+                this->model = this->world->ModelByName(this->modelName);
+                if (!this->model)
                 {
+                    this->custom_console.debug("Model " + this->modelName + " not found, retrying...", utils::Console::RED);
                     boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-                    continue;
+                    continue; // Retry finding the model
                 }
+                else 
+                {
+                    // Model already found, no need to search again
+                    this->custom_console.debug("--> Sensor " + this->modelName + " found.", utils::Console::GREEN);
+                    break;
+                }
+            }
+                
+            while (true)
+            {
 
                 // Set initial sensor pose if not initialized
                 if (!this->modelInitialized)
@@ -212,38 +223,38 @@ namespace gazebo
             this->custom_console.debug("Orbit thread stopped.", utils::Console::RED);
         }
 
-    public:
-        void OnUpdate()
-        {
-            if (!this->modelsFound)
-            {
-                // This function is called every simulation iteration.
-                if (!this->model)
-                {
-                    this->model = this->world->ModelByName(this->modelName);
-                    if (!this->model)
-                    {
-                        // gzerr << "Model " << this->modelName <<  " not found!" << std::endl;
-                        return;
-                    }
-                    else 
-                    {
-                        // Model already found, no need to search again
-                        this->custom_console.debug("--> Sensor " + this->modelName + " found.", utils::Console::GREEN);
-                    }
-                }
+    // public:
+    //     void OnUpdate()
+    //     {
+    //         if (!this->modelsFound)
+    //         {
+    //             // This function is called every simulation iteration.
+    //             if (!this->model)
+    //             {
+    //                 this->model = this->world->ModelByName(this->modelName);
+    //                 if (!this->model)
+    //                 {
+    //                     // gzerr << "Model " << this->modelName <<  " not found!" << std::endl;
+    //                     return;
+    //                 }
+    //                 else 
+    //                 {
+    //                     // Model already found, no need to search again
+    //                     this->custom_console.debug("--> Sensor " + this->modelName + " found.", utils::Console::GREEN);
+    //                 }
+    //             }
                 
-                this->modelsFound = true;
+    //             this->modelsFound = true;
                 
-                // Start the orbit thread once models are found
-                if (!this->threadRunning)
-                {
-                    this->threadRunning = true;
-                    this->run_thread = boost::thread(&POIOrbit::RunOrbitThread, this);
-                    this->custom_console.debug("Orbit thread launched.", utils::Console::BLUE);
-                }
-            }
-        }
+    //             // Start the orbit thread once models are found
+    //             if (!this->threadRunning)
+    //             {
+    //                 this->threadRunning = true;
+    //                 this->run_thread = boost::thread(&POIOrbit::RunOrbitThread, this);
+    //                 this->custom_console.debug("Orbit thread launched.", utils::Console::BLUE);
+    //             }
+    //         }
+    //     }
     };
 
     // Register this plugin with the simulator
