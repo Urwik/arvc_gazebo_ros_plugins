@@ -322,6 +322,12 @@ namespace gazebo
         im::Vector2d height = this->config["environment"]["height"].as<im::Vector2d>();
         im::Vector3d max_pos = this->config["environment"]["position"]["max"].as<im::Vector3d>();
         im::Vector3d min_pos = this->config["environment"]["position"]["min"].as<im::Vector3d>();
+
+        im::Vector3d max_pos_structure = this->structure_model->CollisionBoundingBox().Max();
+        im::Vector3d min_pos_structure = this->structure_model->CollisionBoundingBox().Min();
+
+        im::Vector3d invalid_min_pos = min_pos_structure;
+        im::Vector3d invalid_max_pos = max_pos_structure;
         im::Vector2d scale_val = this->config["environment"]["scale"].as<im::Vector2d>();
 
         std::vector<std::string> model_names;
@@ -346,7 +352,7 @@ namespace gazebo
             utils::setModelName(model_element, model_name);
             this->console.debug("Setea el nombre del modelo: " + model_name);
 
-            im::Vector3d position = utils::computeRandomPosition(min_pos, max_pos);
+            im::Vector3d position = utils::computeRandomPosition(min_pos, max_pos, invalid_min_pos, invalid_max_pos);
             this->console.debug("Genera una posicion aleatoria: ");
             // im::Vector3d scale = utils::computeRandomScale(length, width, height); // DIFFERENT SCALE FOR EACH AXIS
             im::Vector3d scale = utils::computeRandomScale(scale_val); // SAME SCALE FOR ALL AXIS

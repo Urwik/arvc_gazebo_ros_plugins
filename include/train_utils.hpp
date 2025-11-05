@@ -76,6 +76,36 @@ namespace utils
         return position;
     }
 
+    im::Vector3d computeRandomPosition(im::Vector3d min, im::Vector3d max, im::Vector3d min_invalid, im::Vector3d max_invalid, std::string rand_mode = "uniform")
+    {
+        im::Vector3d position;
+
+        if (rand_mode == "uniform")
+        {
+            do {
+                position.X() = im::Rand::DblUniform(min.X(), max.X());
+                position.Y() = im::Rand::DblUniform(min.Y(), max.Y());
+                position.Z() = im::Rand::DblUniform(min.Z(), max.Z());
+            } while ( (position.X() >= min_invalid.X() && position.X() <= max_invalid.X()) &&
+                      (position.Y() >= min_invalid.Y() && position.Y() <= max_invalid.Y()) &&
+                      (position.Z() >= min_invalid.Z() && position.Z() <= max_invalid.Z()) );
+        }
+        else if (rand_mode == "normal")
+        {
+            do {
+                position.Y() = im::Rand::DblNormal(0, max.X() / 3); // 3 is a factor to reduce the standard deviation
+                position.Z() = im::Rand::DblNormal(0, max.Y() / 3);
+                position.X() = im::Rand::DblNormal(0, max.Z() / 3);
+            } while ( (position.X() >= min_invalid.X() && position.X() <= max_invalid.X()) &&
+                      (position.Y() >= min_invalid.Y() && position.Y() <= max_invalid.Y()) &&
+                      (position.Z() >= min_invalid.Z() && position.Z() <= max_invalid.Z()) );
+        }
+        else
+            std::cout << "WRONG RANDOM MODE, POSSIBLE OPTIONS ARE: uniform, normal" << std::endl;
+
+        return position;
+    }
+
     im::Vector3d computeRandomRotation(im::Vector3d rotation_range = im::Vector3d(360,360,360), std::string rand_mode = "uniform")
     {
         im::Vector3d rotation;
