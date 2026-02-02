@@ -87,7 +87,6 @@ ignition::math::Pose3d ComputeRandomPose(std::string _mode, ignition::math::Vect
   /// @brief Get last saved cloud count and continue from that number
   int ResumeEnvCount(fs::path _pcd_dir) {
 
-    bool first_entry = true;
     int last_num = 0;
 
     if (!fs::is_empty(_pcd_dir)) {

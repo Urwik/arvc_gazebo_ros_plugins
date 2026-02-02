@@ -218,7 +218,7 @@ void MoveModel::SavePointCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud)
   pcl::PointCloud<pcl::PointXYZL>::Ptr cloud_labeled (new pcl::PointCloud<pcl::PointXYZL>);
   pcl::copyPointCloud(*cloud, *cloud_labeled);
 
-  for (int i = 0; i < cloud_labeled->points.size(); i++)
+  for (size_t i = 0; i < cloud_labeled->points.size(); i++)
     cloud_labeled->points[i].label = cloud->points[i].intensity;
 
   if (!cloud_labeled->empty())
